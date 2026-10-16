@@ -6,7 +6,7 @@ import { createOperator, redeploy, slotIndex, removeHold, pruneHolds, dependsOn,
 import { createEnemy, faceDoor, updateVis } from "./entities/enemy.js";
 import { step } from "./systems/combat.js";
 import { setSpeed, recordReplay, applyReplayFrame, startReplay, endReplay } from "./systems/replay.js";
-import { initRenderer, layout, zoomAt, clampView, drawStatic, draw } from "./systems/render.js";
+import { initRenderer, layout, zoomAt, clampView, drawStatic, draw, getTS } from "./systems/render.js";
 
 const $ = id => document.getElementById(id);
 
@@ -299,6 +299,261 @@ function waitTap(o, tx, ty) {
   const at = state.pendingHold.at;
   state.pendingHold = null;
   for (const y of state.ops) {
+    if (y === o || !y.alive) continue;
+    const j = y.path.findIndex(p => tileIs(p, tx, ty));
+    if (j < 0) continue;
+    if (dependsOn(y.id, o.id)) {
+      say(`${NAMES[y.id]} já espera por ${NAMES[o.id]}: os dois ficariam travados.`);
+      state.uiDirty = true;
+      req();
+      return;
+    }
+    const old = o.holds.find(h => h.at === at);
+    if (old) removeHold(o, old);
+    const hp = at === 0 ? o : o.path[at - 1];
+    const h = { at, op: y.id, ti: j + 1, hx: hp.x | 0, hy: hp.y | 0, tx, ty };
+    o.holds.push(h);
+    o.acts.push({ hold: h });
+    say(`${NAMES[o.id]} espera ${NAMES[y.id]} chegar ao ponto marcado.`);
+    state.uiDirty = true;
+    req();
+    return;
+  }
+  say("Esse ponto não está na rota de outro operador. Espera cancelada.");
+  state.uiDirty = true;
+  req();
+}
+
+function tapAt(e) {
+  if (state.status !== "plan") return;
+  const cv = $("cv");
+  const r = cv.getBoundingClientRect();
+  const tx = Math.floor(state.OX + ((e.clientX - r.left) / r.width) * (state.W / state.Z));
+  const ty = Math.floor(state.OY + ((e.clientY - r.top) / r.height) * (state.H / state.Z));
+  if (tx < 0 || ty < 0 || tx >= state.W || ty >= state.H) return;
+  const hit = state.ops.findIndex(o => o.alive && (o.x | 0) === tx && (o.y | 0) === ty);
+  if (hit >= 0 && hit !== state.sel && state.mode === "move") { select(hit); return; }
+  if (state.turn === 1 && state.mode === "move" && hit < 0 && slotIndex(tx, ty) >= 0) {
+    redeploy(state.ops[state.sel], tx, ty);
+    return;
+  }
+  const o = state.ops[state.sel];
+  if (!o.alive) return;
+  if (state.mode === "wait") { waitTap(o, tx, ty); return; }
+  if (state.mode === "aim") {
+    o.acts.push({ aim: o.aim });
+    o.aim = { x: tx + .5, y: ty + .5 };
+  } else {
+    if (hit === state.sel) return;
+    const s = o.path.length ? o.path[o.path.length - 1] : o;
+    const full = bfs(s.x | 0, s.y | 0, tx, ty);
+    if (!full) {
+      say(state.solid[ty * state.W + tx] ? "Esse ponto está bloqueado." : "Sem caminho até ali.");
+      state.uiDirty = true;
+      req();
+      return;
+    }
+    let left = MOVE_BUDGET - pathLen(o), px = s.x, py = s.y, n = 0;
+    for (const q of full) {
+      const d = Math.hypot(q.x - px, q.y - py);
+      if (d > left + 1e-6) break;
+      left -= d; px = q.x; py = q.y; n++;
+    }
+    if (!n) { say(`${NAMES[o.id]} já usou todo o movimento do turno.`); state.uiDirty = true; req(); return; }
+    if (n < full.length) say(`Rota cortada no limite de movimento de ${NAMES[o.id]}.`);
+    o.path.push(...full.slice(0, n));
+    o.acts.push(n);
+  }
+  state.uiDirty = true;
+  req();
+}
+
+function start(resume) {
+  init();
+  state.Z = 1; state.OX = 0; state.OY = 0; state.pendingHold = null;
+  const ok = !!resume && restore();
+  if (!ok) delete state.store.plans[state.mapId];
+  buildSquad();
+  layout(req);
+  saveMatch();
+  return ok;
+}
+
+// Inicialização de Eventos
+function setupEvents() {
+  const cv = $("cv");
+  const ptrs = new Map();
+  let gesture = null;
+
+  cv.addEventListener("pointerdown", e => {
+    cv.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY });
+    if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      gesture = { pinch: true, d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: state.Z };
+    } else if (ptrs.size === 1) {
+      gesture = { pinch: false, moved: false };
+    }
+  });
+
+  cv.addEventListener("pointermove", e => {
+    const p = ptrs.get(e.pointerId);
+    if (!p || !gesture) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    const r = cv.getBoundingClientRect();
+
+    if (gesture.pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      zoomAt(gesture.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, req);
+    } else if (!gesture.pinch) {
+      if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 8) gesture.moved = true;
+      if (gesture.moved && state.Z > 1) {
+        state.OX -= dx / (getTS() * state.Z);
+        state.OY -= dy / (getTS() * state.Z);
+        clampView();
+        req();
+      }
+    }
+  });
+
+  const endPtr = e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.delete(e.pointerId);
+    if (e.type === "pointerup" && gesture && !gesture.pinch && !gesture.moved && !ptrs.size) tapAt(e);
+    if (!ptrs.size) gesture = null;
+    else if (gesture && gesture.pinch) gesture = { pinch: false, moved: true };
+  };
+
+  cv.addEventListener("pointerup", endPtr);
+  cv.addEventListener("pointercancel", endPtr);
+  cv.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = cv.getBoundingClientRect();
+    zoomAt(state.Z * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top, req);
+  }, { passive: false });
+
+  $("zin").addEventListener("click", () => zoomAt(state.Z * 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req));
+  $("zout").addEventListener("click", () => zoomAt(state.Z / 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req));
+  document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+  $("undo").addEventListener("click", undo);
+  $("clear").addEventListener("click", clearPlan);
+  $("go").addEventListener("click", execute);
+  $("reset").addEventListener("click", () => { state.lastReplay = null; start(false); });
+  $("again").addEventListener("click", () => { state.lastReplay = null; start(false); });
+
+  $("replayBtn").addEventListener("click", () => state.status === "replay" ? endReplay(req) : startReplay(req));
+  $("spd05").addEventListener("click", () => setSpeed(0.5));
+  $("spd025").addEventListener("click", () => setSpeed(0.25));
+  $("clockSpeed").addEventListener("click", () => setSpeed(state.slowMo === 0.5 ? 0.25 : 0.5));
+
+  addEventListener("keydown", e => {
+    if (document.querySelector(".sheet:not([hidden])")) {
+      if (e.key === "Escape") closeSheets();
+      return;
+    }
+    if (e.target.tagName === "INPUT") return;
+    if (e.target.tagName === "BUTTON" && (e.key === "Enter" || e.key === " ")) return;
+    const k = e.key.toLowerCase();
+    if (k >= "1" && k <= "4") select(+k - 1);
+    else if (k === "m") setMode("move");
+    else if (k === "a") setMode("aim");
+    else if (k === "e") setMode("wait");
+    else if (k === "+" || k === "=") zoomAt(state.Z * 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req);
+    else if (k === "-") zoomAt(state.Z / 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req);
+    else if (k === "z") undo();
+    else if (k === "r") state.status === "replay" ? endReplay(req) : startReplay(req);
+    else if (k === "enter") execute();
+  });
+
+  let rt = 0;
+  new ResizeObserver(() => {
+    clearTimeout(rt);
+    rt = setTimeout(() => layout(req), 60);
+  }).observe($("stage"));
+
+  function closeSheets() {
+    document.querySelectorAll(".sheet").forEach(s => { s.hidden = true; });
+  }
+
+  document.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => {
+    const s = $(b.dataset.open);
+    s.hidden = false;
+    s.querySelector("[data-close]").focus();
+  }));
+
+  document.querySelectorAll(".sheet").forEach(s => s.addEventListener("click", e => {
+    if (e.target === s || e.target.closest("[data-close]")) closeSheets();
+  }));
+
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    readColors();
+    drawStatic();
+    state.uiDirty = true;
+    req();
+  });
+
+  const PF = [["pW", "w"], ["pH", "h"], ["pR", "rooms"], ["pE", "enemies"], ["pC", "crates"], ["pX", "extra"], ["pK", "corridors"], ["pKw", "corrW"]];
+  PF.forEach(([id]) => {
+    const i = $(id), o =$(id + "o"), f = () => { o.textContent = i.value + (id === "pC" || id === "pK" ? "%" : ""); };
+    i.addEventListener("input", f);
+    f();
+  });
+
+  function applyParams(g) {
+    PF.forEach(([id, k]) => {
+      if (g[k] != null) { $(id).value = g[k];$(id).dispatchEvent(new Event("input")); }
+    });
+    if (g.seed) $("pSeed").value = g.seed;
+    state.store.settings.gen = { ...g };
+    persist();
+  }
+
+  const newSeed = () => Math.random().toString(36).slice(2, 8);
+  $("pSeed").value = newSeed();
+
+  function genMap() {
+    let seed = $("pSeed").value.trim();
+    if (!seed) { seed = newSeed(); $("pSeed").value = seed; }
+    const p = { seed };
+    PF.forEach(([id, k]) => { p[k] = +$(id).value; });
+    const res = generate(p);
+    state.store.settings.gen = p;
+    setMap(res.rows, { name: seed, source: "generated", params: p });
+    if (start(true)) return;
+    let m = `Mapa gerado com ${res.rooms} salas, ${res.corridors} ${res.corridors === 1 ? "corredor" : "corredores"} e ${res.enemies} inimigos.`;
+    if (res.entries < 2) m += ` Este mapa tem só uma entrada.`;
+    if (res.rooms < p.rooms) m += ` Nesse tamanho só couberam ${res.rooms} salas.`;
+    else if (res.enemies < p.enemies) m += ` Não havia espaço para ${p.enemies}.`;
+    say(m);
+    state.uiDirty = true;
+    req();
+  }
+
+  $("genBtn").addEventListener("click", () => { genMap(); closeSheets(); });
+  $("reroll").addEventListener("click", () => { $("pSeed").value = newSeed(); genMap(); closeSheets(); });
+  $("classic").addEventListener("click", () => {
+    setMap(CLASSIC, { name: "Clássico", source: "classic", params: CLASSIC_PARAMS });
+    applyParams(CLASSIC_PARAMS);
+    start(true);
+    closeSheets();
+  });
+
+  let wipeArm = 0;
+  $("wipe").addEventListener("click", () => {
+    const b = $("wipe");
+    if (!wipeArm) {
+      b.textContent = "Toque de novo para apagar";
+      wipeArm = setTimeout(() => { wipeArm = 0; b.textContent = "Apagar dados salvos"; }, 3000);
+      return;
+    }
+    clearTimeout(wipeArm);
+    wipeArm = 0;
+    b.textContent = "Apagar dados salvos";
+    const meta = state.store.maps[state.mapId];
+    state.store = { version: 1, lastMapId: null, settings: { gen: null }, maps: {}, plans: {}, matches: {} };
+    setMap(state.MAP, meta ? { name: meta.name, source: meta.source, params: meta.params } : { name: "Clássico", source: "classic", params: CLASSIC_PARf state.ops) {
     if (y === o || !y.alive) continue;
     const j = y.path.findIndex(p => tileIs(p, tx, ty));
     if (j < 0) continue;
