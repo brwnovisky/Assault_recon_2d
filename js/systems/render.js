@@ -636,6 +636,3 @@ state.ops.forEach((o, i) => {
 
   ctx.restore();
 });
-}
-
-
