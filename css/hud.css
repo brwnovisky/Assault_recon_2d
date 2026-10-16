@@ -78,6 +78,7 @@ button:disabled {
 
 .chip .mv {
   font-size: 13px;
+  min-height: 1.35em; /* mesma altura vazio ou com texto: o painel não muda o tamanho do palco */
   color: var(--muted);
   font-weight: 500;
   white-space: nowrap;

@@ -28,13 +28,14 @@ export function zoomAt(nz, px, py, req) {
 }
 
 export function layout(req) {
-  const st = document.getElementById("stage"), w = st.clientWidth, h = st.clientHeight;
+  const { width: w, height: h } = document.getElementById("stage").getBoundingClientRect();
   if (!w || !h) return;
-  TS = Math.max(6, Math.min(48, Math.floor(Math.min(w / state.W, h / state.H))));
+  // Casa fracionária: o mapa ocupa todo o lado limitante do palco
+  TS = Math.max(6, Math.min(w / state.W, h / state.H));
   dpr = Math.min(2, window.devicePixelRatio || 1);
   for (const c of [cv, bg]) {
-    c.width = state.W * TS * dpr;
-    c.height = state.H * TS * dpr;
+    c.width = Math.ceil(state.W * TS * dpr);
+    c.height = Math.ceil(state.H * TS * dpr);
   }
   cv.style.width = state.W * TS + "px";
   cv.style.height = state.H * TS + "px";
