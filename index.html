@@ -36,7 +36,8 @@
     </header>
 
     <!-- Barra de Replay (Acima do mapa) -->
-    <div class="replay-bar" id="replayBar" hidden>
+    <div class="replay-bar">
+      <button id="replayBtn">Replay</button>
       <button id="replayToggle">Pausar</button>
       <input type="range" id="replaySlider" min="0" max="15" step="0.01" value="0">
       <div class="seg" role="group">
@@ -75,7 +76,6 @@
         <button id="undo">Desfazer</button>
         <button id="clear">Limpar</button>
         <button id="reset">Reiniciar</button>
-        <button id="replayBtn">Replay</button>
         <button id="go" class="go">Executar</button>
       </div>
     </section>

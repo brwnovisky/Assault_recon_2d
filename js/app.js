@@ -162,7 +162,7 @@ function ui() {
   $("go").disabled = state.status !== "plan";
   $("replayBtn").disabled = state.status !== "plan" || !state.lastReplay || !state.lastReplay.length;
   $("over").hidden = state.status !== "over";
-  $("replayBar").hidden = state.status !== "replay";
+  for (const id of ["replayToggle", "replaySlider", "replayClose"]) $(id).disabled = state.status !== "replay";
   $("replayToggle").textContent = state.replayPaused ? "Reproduzir" : "Pausar";
   if (state.status === "replay") $("replaySlider").max = state.lastReplay[state.lastReplay.length - 1].simTime;
   $("spd05").setAttribute("aria-pressed", String(state.slowMo === 0.5));

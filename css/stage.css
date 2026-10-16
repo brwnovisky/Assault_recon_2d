@@ -71,10 +71,6 @@ canvas {
   border: 1px solid var(--line);
 }
 
-.replay-bar[hidden] {
-  display: none;
-}
-
 .replay-bar input[type=range] {
   flex: 1;
   min-width: 0;
