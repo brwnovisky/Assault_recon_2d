@@ -262,86 +262,132 @@ export function draw() {
     ctx.rotate(e.a);
 
     if (e.vis) {
-      // 1. Botas (Mais abaixo de tudo)
-      ctx.fillStyle = "#11161D";
+      // 0. Sombra suave
+      ctx.fillStyle = "rgba(8, 12, 16, 0.45)";
       ctx.beginPath();
-      ctx.ellipse(-0.05, -0.11, 0.08, 0.045, 0, 0, 2 * Math.PI);
-      ctx.ellipse(-0.05, 0.11, 0.08, 0.045, 0, 0, 2 * Math.PI);
+      ctx.ellipse(0.02, 0.02, 0.19, 0.21, 0, 0, 2 * Math.PI);
       ctx.fill();
 
-      // 2. Tronco/Ombros
+      // 1. Botas
+      ctx.fillStyle = "#0B0F13";
+      ctx.beginPath();
+      ctx.ellipse(-0.08, -0.13, 0.045, 0.024, 0.15, 0, 2 * Math.PI);
+      ctx.ellipse(-0.15, 0.08, 0.045, 0.024, -0.1, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // 2. Tronco perfilado
       ctx.fillStyle = C.enemy;
       ctx.beginPath();
-      ctx.ellipse(-0.06, 0, 0.13, 0.22, 0, 0, 2 * Math.PI);
+      ctx.moveTo(-0.15, 0.02);
+      ctx.lineTo(-0.13, 0.17);
+      ctx.lineTo(-0.02, 0.16);
+      ctx.lineTo(0.08, 0.05);
+      ctx.lineTo(0.06, -0.10);
+      ctx.lineTo(0.02, -0.18);
+      ctx.lineTo(-0.09, -0.17);
+      ctx.lineTo(-0.14, -0.08);
+      ctx.closePath();
       ctx.fill();
+      ctx.lineWidth = 0.015;
+      ctx.strokeStyle = "#0E1318";
+      ctx.stroke();
 
-      // 3. Fuzil AK-47 (Por cima do corpo, mas sob os braços/mãos para encaixe anatômico)
-      ctx.fillStyle = "#63391A"; // Soleira de madeira
-      ctx.fillRect(-0.04, 0.045, 0.06, 0.032);
+      const yg = 0.095;
 
-      ctx.fillStyle = "#1E2630"; // Caixa do mecanismo
-      ctx.fillRect(0.02, 0.042, 0.13, 0.046);
-
-      ctx.fillStyle = "#2B1A10"; // Carregador curvo de metal/madeira
+      // 3. Braços
       ctx.beginPath();
-      ctx.moveTo(0.12, 0.05);
-      ctx.quadraticCurveTo(0.16, 0.015, 0.20, -0.01);
-      ctx.lineTo(0.22, 0.015);
-      ctx.quadraticCurveTo(0.18, 0.042, 0.15, 0.068);
+      ctx.moveTo(0.01, -0.17);
+      ctx.lineTo(0.12, -0.12);
+      ctx.lineTo(0.23, yg - 0.02);
+      ctx.lineTo(0.21, yg + 0.02);
+      ctx.lineTo(0.10, -0.06);
+      ctx.lineTo(0.04, -0.12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-0.06, 0.16);
+      ctx.lineTo(0.03, 0.16);
+      ctx.lineTo(0.11, yg + 0.03);
+      ctx.lineTo(0.08, yg - 0.01);
+      ctx.lineTo(0.01, 0.11);
+      ctx.lineTo(-0.06, 0.10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 4. Colete
+      ctx.fillStyle = "#1E1815";
+      ctx.beginPath();
+      ctx.roundRect(-0.10, -0.10, 0.15, 0.20, 0.02);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#2D221D";
+      ctx.fillRect(-0.07, -0.13, 0.09, 0.032);
+      ctx.fillRect(-0.09, 0.085, 0.09, 0.032);
+      for (const py of [-0.06, -0.01, 0.04]) {
+        ctx.fillRect(-0.01, py, 0.045, 0.034);
+      }
+
+      // 5. Fuzil AK-47 apoiado no ombro direito
+      ctx.fillStyle = "rgba(6, 9, 12, 0.35)";
+      ctx.fillRect(-0.03, yg - 0.01, 0.44, 0.03);
+
+      // Coronha de madeira
+      ctx.fillStyle = "#5C361B";
+      ctx.fillRect(-0.03, yg - 0.010, 0.08, 0.020);
+
+      // Caixa da culatra
+      ctx.fillStyle = "#222933";
+      ctx.fillRect(0.05, yg - 0.011, 0.12, 0.024);
+
+      // Carregador curvo
+      ctx.fillStyle = "#63391A";
+      ctx.beginPath();
+      ctx.moveTo(0.09, yg - 0.011);
+      ctx.lineTo(0.12, yg - 0.011);
+      ctx.lineTo(0.145, yg - 0.038);
+      ctx.lineTo(0.115, yg - 0.040);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = "#7A4720"; // Telha / Guarda-mão
-      ctx.fillRect(0.15, 0.048, 0.08, 0.038);
+      // Guarda-mão de madeira
+      ctx.fillStyle = "#6B3E1F";
+      ctx.fillRect(0.17, yg - 0.011, 0.09, 0.022);
 
-      ctx.fillStyle = "#27313A"; // Cano de aço
-      ctx.fillRect(0.23, 0.056, 0.14, 0.02);
+      // Cano de aço
+      ctx.fillStyle = "#2A333E";
+      ctx.fillRect(0.26, yg - 0.006, 0.12, 0.012);
 
-      ctx.fillStyle = "#151B22"; // Massa de mira e ponta
-      ctx.fillRect(0.35, 0.048, 0.02, 0.036);
-      ctx.fillStyle = "#0E1318";
-      ctx.fillRect(0.37, 0.054, 0.03, 0.024);
+      // Ponto de mira
+      ctx.fillStyle = "#14181E";
+      ctx.fillRect(0.38, yg - 0.010, 0.022, 0.020);
 
-      // 4. Braços e Antebraços (Vêm do tronco, movimentam-se EM DIREÇÃO à arma, por cima da culatra)
-      ctx.lineWidth = 0.07;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = C.enemy;
-
-      // Braço esquerdo (Apoio frontal no guarda-mão)
+      // 6. Luvas
+      ctx.fillStyle = "#141A21";
       ctx.beginPath();
-      ctx.moveTo(-0.04, -0.16);
-      ctx.lineTo(0.10, -0.08);
-      ctx.lineTo(0.19, 0.04);
-      ctx.stroke();
-
-      // Braço direito (Gatilho)
-      ctx.beginPath();
-      ctx.moveTo(-0.04, 0.16);
-      ctx.lineTo(0.10, 0.13);
-      ctx.lineTo(0.09, 0.07);
-      ctx.stroke();
-
-      // 5. Mãos e Dedos (Agarram o fuzil e sobrepõem-se levemente a ele para segurá-lo, agora de forma correta)
-      ctx.fillStyle = "#151B22";
-      ctx.beginPath();
-      // Mão esquerda envolvendo o guarda-mão (por baixo e por cima da telha, o polegar deita na lateral)
-      ctx.arc(0.19, 0.045, 0.033, 0, 2 * Math.PI);
-      // Mão direita na empunhadura do gatilho (mão envolve o cabo, com o dedo indicador ligeiramente estendido para frente no guarda-mato)
-      ctx.arc(0.09, 0.075, 0.033, 0, 2 * Math.PI);
+      ctx.ellipse(0.10, yg + 0.012, 0.017, 0.012, 0.4, 0, 2 * Math.PI);
+      ctx.ellipse(0.23, yg - 0.006, 0.018, 0.012, -0.3, 0, 2 * Math.PI);
       ctx.fill();
 
-      // 6. Cabeça e Capacete (No topo de tudo, projetando a silhueta em primeira pessoa)
+      // 7. Cabeça
+      ctx.fillStyle = "#182028";
+      ctx.beginPath();
+      ctx.ellipse(-0.03, 0.015, 0.065, 0.055, 0, 0, 2 * Math.PI);
+      ctx.fill();
+
       ctx.fillStyle = C.enemy;
       ctx.beginPath();
-      ctx.arc(-0.02, 0, 0.14, 0, 2 * Math.PI);
+      ctx.ellipse(-0.04, 0.020, 0.085, 0.080, 0, 0, 2 * Math.PI);
       ctx.fill();
-      ctx.lineWidth = 0.035;
-      ctx.strokeStyle = C.board;
+      ctx.strokeStyle = "#0E1318";
       ctx.stroke();
 
       ctx.fillStyle = "#0E1318";
       ctx.beginPath();
-      ctx.arc(0.04, 0, 0.09, -Math.PI / 2.4, Math.PI / 2.4);
+      ctx.roundRect(0.005, -0.025, 0.024, 0.09, 0.004);
       ctx.fill();
     } else {
       ctx.strokeStyle = C.enemy; ctx.lineWidth = .06; ctx.globalAlpha = .6;
@@ -377,112 +423,160 @@ export function draw() {
     const legCadence = isMoving ? state.simTime * 14 : 0;
     const stride = isMoving ? Math.sin(legCadence) * 0.14 : 0;
 
-    // 1. Botas
-    ctx.fillStyle = "#10161D";
+    // 0. Sombra suave no solo
+    ctx.fillStyle = "rgba(8, 12, 16, 0.45)";
     ctx.beginPath();
-    ctx.ellipse(-0.06 + stride, -0.12, 0.085, 0.045, 0, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.fillStyle = "#070B0E";
-    ctx.beginPath();
-    ctx.arc(-0.01 + stride, -0.12, 0.04, -Math.PI / 2, Math.PI / 2);
+    ctx.ellipse(0.02, 0.02, 0.19, 0.21, 0, 0, 2 * Math.PI);
     ctx.fill();
 
-    ctx.fillStyle = "#10161D";
+    // 1. Botas tácticas (Passo dinâmico)
+    ctx.fillStyle = "#0B0F13";
     ctx.beginPath();
-    ctx.ellipse(-0.06 - stride, 0.12, 0.085, 0.045, 0, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.fillStyle = "#070B0E";
-    ctx.beginPath();
-    ctx.arc(-0.01 - stride, 0.12, 0.04, -Math.PI / 2, Math.PI / 2);
+    ctx.ellipse(-0.08 + stride, -0.13, 0.045, 0.024, 0.15, 0, 2 * Math.PI);
+    ctx.ellipse(-0.15 - stride, 0.08, 0.045, 0.024, -0.1, 0, 2 * Math.PI);
     ctx.fill();
 
-    // 2. Tronco / Colete
+    // 2. Tronco anatómico (Postura perfilada/bladed: ombro esquerdo avança, ombro direito recua)
     ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.ellipse(-0.06, 0, 0.14, 0.23, 0, 0, 2 * Math.PI);
-    ctx.fill();
-
-    ctx.fillStyle = "#0D131A";
-    ctx.globalAlpha = 0.35;
-    ctx.fillRect(-0.19, -0.13, 0.09, 0.26);
-    ctx.globalAlpha = 1;
-
-    // 3. Fuzil M4 (Atrás do plano de antebraços e mãos para encaixar "embaixo" na empunhadura)
-    ctx.fillStyle = "#2D3742"; // Coronha / buffer tube
-    ctx.fillRect(-0.04, 0.055, 0.07, 0.026);
-    ctx.fillStyle = "#121820";
-    ctx.fillRect(-0.05, 0.050, 0.016, 0.036);
-
-    ctx.fillStyle = "#1E2935"; // Receiver principal
-    ctx.fillRect(0.03, 0.048, 0.14, 0.038);
-
-    ctx.fillStyle = "#111822"; // Carregador reto / magazine STANAG
-    ctx.fillRect(0.06, 0.034, 0.08, 0.021);
-    ctx.fillStyle = "#38BDF8"; // Detalhe da munição / marca de identificação
-    ctx.fillRect(0.12, 0.038, 0.015, 0.013);
-
-    ctx.fillStyle = "#111822"; // Luneta / Mira Holográfica
-    ctx.fillRect(0.13, 0.035, 0.04, 0.02);
-
-    ctx.fillStyle = "#2A3644"; // Guarda-mão / trilho Picatinny (handguard)
-    ctx.fillRect(0.17, 0.051, 0.11, 0.032);
-    ctx.strokeStyle = "#17202A";
-    ctx.lineWidth = 0.012;
-    ctx.beginPath();
-    ctx.moveTo(0.20, 0.051); ctx.lineTo(0.20, 0.083);
-    ctx.moveTo(0.24, 0.051); ctx.lineTo(0.24, 0.083);
-    ctx.stroke();
-
-    ctx.fillStyle = "#1A232D"; // Supressor / cano estendido
-    ctx.beginPath();
-    ctx.roundRect(0.28, 0.050, 0.15, 0.034, 0.01);
-    ctx.fill();
-    ctx.fillStyle = "#0A0E13"; // Ponta / quebra-chamas
-    ctx.fillRect(0.42, 0.055, 0.015, 0.024);
-
-    // 4. Braços e Antebraços (Desenhavamos por baixo da arma. Agora posicionados anatomica e visualmente por cima)
-    ctx.lineWidth = 0.08;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = col;
-
-    // Braço esquerdo (Apoio no handguard frontal, por cima da culatra e cano)
-    ctx.beginPath();
-    ctx.moveTo(-0.04, -0.18);
-    ctx.lineTo(0.12, -0.09);
-    ctx.lineTo(0.23, 0.04);
-    ctx.stroke();
-
-    // Braço direito (Mão de disparo, passa do ombro até o receiver traseiro por trás/cima)
-    ctx.beginPath();
-    ctx.moveTo(-0.04, 0.18);
-    ctx.lineTo(0.11, 0.14);
-    ctx.lineTo(0.09, 0.06);
-    ctx.stroke();
-
-    // 5. Mãos (Agora desenhadas EM CIMA do fuzil para simular a empunhadura natural por cima dos trilhos/telha)
-    ctx.fillStyle = "#121820";
-    ctx.beginPath();
-    // Mão esquerda segurando o guarda-mão (dedos que envolvem por cima da luneta/corpo)
-    ctx.arc(0.23, 0.046, 0.035, 0, 2 * Math.PI);
-    // Mão direita na empunhadura do gatilho (envolve o cabo com caimento natural)
-    ctx.arc(0.09, 0.064, 0.033, 0, 2 * Math.PI);
-    ctx.fill();
-
-    // 6. Capacete e Visor
-    ctx.beginPath();
-    ctx.arc(-0.02, 0, 0.15, 0, 2 * Math.PI);
-    ctx.fillStyle = col;
-    ctx.fill();
-    ctx.lineWidth = 0.035;
-    ctx.strokeStyle = C.board;
-    ctx.stroke();
-
-    ctx.fillStyle = "#0A0E13";
-    ctx.beginPath();
-    ctx.arc(0.03, 0, 0.11, -Math.PI / 3, Math.PI / 3);
-    ctx.lineTo(0.05, 0);
+    ctx.moveTo(-0.15, 0.02);
+    ctx.lineTo(-0.13, 0.17);  // Ombro direito (recuado para suporte)
+    ctx.lineTo(-0.02, 0.16);  // Encaixe da coronha
+    ctx.lineTo(0.08, 0.05);   // Peitoral direito
+    ctx.lineTo(0.06, -0.10);  // Peitoral esquerdo
+    ctx.lineTo(0.02, -0.18);  // Ombro esquerdo (projetado em frente)
+    ctx.lineTo(-0.09, -0.17);
+    ctx.lineTo(-0.14, -0.08);
     ctx.closePath();
     ctx.fill();
+    ctx.lineWidth = 0.015;
+    ctx.strokeStyle = "#0E1318";
+    ctx.stroke();
+
+    // Eixo da arma no ombro direito
+    const yg = 0.095;
+
+    // 3. Braços
+    // Braço esquerdo: estendido em frente a cruzar o peito para segurar o guarda-mão
+    ctx.beginPath();
+    ctx.moveTo(0.01, -0.17);
+    ctx.lineTo(0.12, -0.12);
+    ctx.lineTo(0.23, yg - 0.02);
+    ctx.lineTo(0.21, yg + 0.02);
+    ctx.lineTo(0.10, -0.06);
+    ctx.lineTo(0.04, -0.12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Braço direito: fletido junto à lateral direita, punho no gatilho
+    ctx.beginPath();
+    ctx.moveTo(-0.06, 0.16);
+    ctx.lineTo(0.03, 0.16);
+    ctx.lineTo(0.11, yg + 0.03);
+    ctx.lineTo(0.08, yg - 0.01);
+    ctx.lineTo(0.01, 0.11);
+    ctx.lineTo(-0.06, 0.10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 4. Colete balístico táctico (Plate Carrier e bolsas MOLLE)
+    ctx.fillStyle = "#182029";
+    ctx.beginPath();
+    ctx.roundRect(-0.10, -0.10, 0.15, 0.20, 0.02);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#222C38";
+    ctx.fillRect(-0.07, -0.13, 0.09, 0.032);
+    ctx.fillRect(-0.09, 0.085, 0.09, 0.032);
+
+    ctx.fillStyle = "#2B3746";
+    for (const py of [-0.06, -0.01, 0.04]) {
+      ctx.fillRect(-0.01, py, 0.045, 0.034);
+    }
+
+    // 5. Carabina M4 (Alinhada ao ombro direito: yg = 0.095)
+    ctx.fillStyle = "rgba(6, 9, 12, 0.35)";
+    ctx.fillRect(-0.03, yg - 0.01, 0.44, 0.03);
+
+    // Coronha encaixada no ombro direito
+    ctx.fillStyle = "#2B343E";
+    ctx.fillRect(-0.03, yg - 0.009, 0.08, 0.018);
+    ctx.fillStyle = "#141920";
+    ctx.fillRect(-0.04, yg - 0.012, 0.012, 0.024);
+
+    // Caixa da culatra (Receiver)
+    ctx.fillStyle = "#1D242C";
+    ctx.fillRect(0.05, yg - 0.011, 0.12, 0.022);
+
+    // Carregador STANAG voltado para o centro/peito
+    ctx.fillStyle = "#13181E";
+    ctx.beginPath();
+    ctx.moveTo(0.09, yg - 0.011);
+    ctx.lineTo(0.12, yg - 0.011);
+    ctx.lineTo(0.135, yg - 0.036);
+    ctx.lineTo(0.105, yg - 0.036);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ótica Holográfica com lente azul
+    ctx.fillStyle = "#0D1116";
+    ctx.fillRect(0.08, yg - 0.007, 0.045, 0.014);
+    ctx.fillStyle = "#38BDF8";
+    ctx.fillRect(0.115, yg - 0.005, 0.006, 0.010);
+
+    // Guarda-mão e ranhuras
+    ctx.fillStyle = "#27313B";
+    ctx.fillRect(0.17, yg - 0.010, 0.11, 0.020);
+    ctx.fillStyle = "#1B222A";
+    for (const rx of [0.19, 0.22, 0.25]) {
+      ctx.fillRect(rx, yg - 0.010, 0.012, 0.020);
+    }
+
+    // Supressor
+    ctx.fillStyle = "#141920";
+    ctx.beginPath();
+    ctx.roundRect(0.28, yg - 0.009, 0.14, 0.018, 0.003);
+    ctx.fill();
+    ctx.fillStyle = "#090C0F";
+    ctx.fillRect(0.415, yg - 0.006, 0.012, 0.012);
+
+    // 6. Luvas tácticas
+    ctx.fillStyle = "#141A21";
+    // Mão direita: empunhadura do gatilho (pistol grip)
+    ctx.beginPath();
+    ctx.ellipse(0.10, yg + 0.012, 0.017, 0.012, 0.4, 0, 2 * Math.PI);
+    // Mão esquerda: envolve o guarda-mão à frente
+    ctx.ellipse(0.23, yg - 0.006, 0.018, 0.012, -0.3, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // 7. Cabeça e capacete com bochecha junto à coronha
+    ctx.fillStyle = "#182028";
+    ctx.beginPath();
+    ctx.ellipse(-0.03, 0.015, 0.065, 0.055, 0, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(-0.04, 0.020, 0.085, 0.080, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = "#0E1318";
+    ctx.stroke();
+
+    // Auriculares ComTac
+    ctx.fillStyle = "#13181E";
+    ctx.fillRect(-0.06, -0.070, 0.036, 0.018);
+    ctx.fillRect(-0.06, 0.092, 0.036, 0.018);
+
+    // Óculos de proteção frontal
+    ctx.fillStyle = "#0D1217";
+    ctx.beginPath();
+    ctx.roundRect(0.005, -0.025, 0.024, 0.09, 0.004);
+    ctx.fill();
+    ctx.fillStyle = "#1E2E3E";
+    ctx.fillRect(0.017, -0.015, 0.006, 0.07);
 
     ctx.restore();
   });
