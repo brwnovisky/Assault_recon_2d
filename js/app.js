@@ -405,13 +405,26 @@ function setupEvents() {
       const [a, b] = [...ptrs.values()], r = cv.getBoundingClientRect();
       zoomAt(gesture.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, req);
     } else if (!gesture.pinch) {
+  cv.addEventListener("pointermove", e => {
+    const p = ptrs.get(e.pointerId);
+    if (!p || !gesture) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    const r = cv.getBoundingClientRect();
+
+    if (gesture.pinch && ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      zoomAt(gesture.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gesture.d0, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, req);
+    } else if (!gesture.pinch) {
       if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 8) gesture.moved = true;
       if (gesture.moved && state.Z > 1) {
-        state.OX -= dx * (state.W / state.Z) / r.width;
-        state.OY -= dy * (state.H / state.Z) / r.height;
+        state.OX -= (dx * (state.W / state.Z)) / (r.width || 1);
+        state.OY -= (dy * (state.H / state.Z)) / (r.height || 1);
         clampView();
         req();
       }
+    }
+  });
     }
   });
 
