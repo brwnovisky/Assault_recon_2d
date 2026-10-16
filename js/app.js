@@ -5,7 +5,7 @@ import { buildWorld } from "./world.js";
 import { pathLen } from "./pathfinding.js";
 import { generate } from "./map-generator.js";
 import { step } from "./systems/simulation.js";
-import { select, setMode, undo, clearPlan, tapTile } from "./systems/planning.js";
+import { select, setMode, undo, clearPlan, tapTile, hasOrders } from "./systems/planning.js";
 import { cycleSpeed, recordReplay, startReplay, stepReplay, toggleReplay, seekReplay, endReplay } from "./systems/replay.js";
 import { initRenderer, layout, zoomAt, clampView, drawStatic, draw } from "./systems/render.js";
 
@@ -48,7 +48,7 @@ function finish(win) {
 }
 
 function execute() {
-  if (state.status !== "plan") return;
+  if (state.status !== "plan" || !hasOrders()) return;
   state.status = "exec";
   state.simTime = 0;
   state.lastShot = -9;
@@ -180,7 +180,7 @@ function ui() {
   const o = state.ops[state.sel];
   $("undo").disabled = state.status !== "plan" || !o.acts.length;
   $("clear").disabled = state.status !== "plan" || !o.acts.length;
-  $("go").disabled = state.status !== "plan";
+  $("go").disabled = state.status !== "plan" || !hasOrders();
   $("replayBtn").disabled = state.status !== "plan" || !state.lastReplay || !state.lastReplay.length;
   $("over").hidden = state.status !== "over";
   for (const id of ["replayToggle", "timeline", "replayClose"]) $(id).disabled = state.status !== "replay";

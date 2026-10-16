@@ -3,6 +3,9 @@ import { state, say } from "../state.js";
 import { bfs, pathLen } from "../pathfinding.js";
 import { redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs, endOf, byPriority } from "../entities/operator.js";
 
+// Há ordem do jogador (rota, mira ou espera) para algum operador vivo
+export const hasOrders = () => state.ops.some(o => o.alive && o.acts.length > 0);
+
 export function select(i) {
   if (state.status !== "plan" || !state.ops[i] || !state.ops[i].alive) return;
   if (i !== state.sel) state.mode = null;

@@ -20,5 +20,5 @@ export function step(callbacks) {
   const done = state.ops.every(o => !o.alive || ((o.stopped || o.pi >= o.path.length) && Math.abs(adiff(o.want, o.a)) < 1e-6));
   const stalled = state.simTime - state.lastMove > 1;
   const quiet = !state.ops.some(u => u.alive && u.target) && !state.enemies.some(u => u.alive && u.target);
-  if ((done || stalled) && quiet && state.simTime - state.lastShot > 0.8 && state.simTime > 0.5) callbacks.freezeTurn(false);
+  if ((done || stalled) && quiet && state.simTime - state.lastShot > 0.8) callbacks.freezeTurn(false);
 }
