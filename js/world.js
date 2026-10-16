@@ -21,7 +21,8 @@ export function buildWorld() {
   state.lines = [];
   state.turn = 1;
   state.sel = 0;
-  state.mode = "move";
+  state.mode = null;
+  state.planSeq = 0;
   state.status = "plan";
   state.entries = [[], []];
 

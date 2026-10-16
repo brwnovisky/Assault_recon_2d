@@ -1,6 +1,7 @@
-import { C, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE } from "../config.js";
+import { C, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, TRACER_LIFE } from "../config.js";
 import { state } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
+import { endOf } from "../entities/operator.js";
 
 let cv, ctx, bg, bgx, TS = 32, dpr = 1;
 
@@ -111,8 +112,6 @@ function cone(u, half, range, color, alpha) {
   ctx.globalAlpha = 1;
 }
 
-const endOf = o => o.path.length ? o.path[o.path.length - 1] : o;
-
 function aimPreview(o, col) {
   const s = endOf(o);
   let a = o.a;
@@ -156,8 +155,50 @@ function drawX(px, py, col, a) {
   ctx.globalAlpha = 1;
 }
 
+// Arma no referencial da unidade: cano no eixo y = GUN_Y, girando em torno da culatra (GUN_PIVOT)
+const GUN_Y = 0.095, GUN_PIVOT = 0.05, RECOIL = 0.05, MUZZLE_OP = 0.42, MUZZLE_EN = 0.402;
+
+// Tracer ativo da unidade (o intervalo entre disparos é maior que a vida do tracer)
+const shotOf = (en, i) => state.tracers.find(t => t.en === en && t.i === i);
+
+// Pose da arma: alinha o cano ao ponto do disparo (acerto ou erro) e aplica o recuo
+function gunPose(u, shot) {
+  if (!shot) return { ang: 0, back: 0 };
+  const dx = shot.tx - u.x, dy = shot.ty - u.y, c = Math.cos(u.a), s = Math.sin(u.a);
+  const lx = dx * c + dy * s, ly = dy * c - dx * s;
+  return { ang: Math.atan2(ly - GUN_Y, lx - GUN_PIVOT), back: RECOIL * shot.t / TRACER_LIFE };
+}
+
+function gunPoint(pose, x, y) {
+  const c = Math.cos(pose.ang), s = Math.sin(pose.ang), px = x - GUN_PIVOT - pose.back, py = y - GUN_Y;
+  return [GUN_PIVOT + px * c - py * s, GUN_Y + px * s + py * c];
+}
+
+function applyGun(pose) {
+  ctx.translate(GUN_PIVOT, GUN_Y);
+  ctx.rotate(pose.ang);
+  ctx.translate(-GUN_PIVOT - pose.back, -GUN_Y);
+}
+
+// Ponta do cano em coordenadas do mapa
+function muzzle(u, pose, len) {
+  const [mx, my] = gunPoint(pose, len, GUN_Y), c = Math.cos(u.a), s = Math.sin(u.a);
+  return [u.x + mx * c - my * s, u.y + mx * s + my * c];
+}
+
+// Braço do ombro (fixo) ao pulso (preso à arma); o cotovelo acompanha metade do movimento
+function drawArm(pose, w, sx, sy, ex, ey, wx, wy) {
+  const [gx, gy] = gunPoint(pose, ex, ey), [hx, hy] = gunPoint(pose, wx, wy);
+  ctx.lineWidth = w;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo((ex + gx) / 2, (ey + gy) / 2);
+  ctx.lineTo(hx, hy);
+  ctx.stroke();
+}
+
 // Inimigos com Fuzil AK-47
-function drawEnemy(e) {
+function drawEnemy(e, pose) {
   ctx.save();
   ctx.translate(e.x, e.y);
   ctx.rotate(e.a);
@@ -176,24 +217,10 @@ function drawEnemy(e) {
     ctx.ellipse(-0.15, 0.08, 0.05, 0.028, -0.1, 0, 2 * Math.PI);
     ctx.fill();
 
-    const yg = 0.095;
-
     // 2. Braços (Mangas volumosas, ligeiramente menos definidas que as dos operadores)
     ctx.strokeStyle = C.enemy;
-
-    ctx.lineWidth = 0.095;
-    ctx.beginPath();
-    ctx.moveTo(-0.02, -0.14);
-    ctx.lineTo(0.12, -0.11);
-    ctx.lineTo(0.22, yg - 0.01);
-    ctx.stroke();
-
-    ctx.lineWidth = 0.10;
-    ctx.beginPath();
-    ctx.moveTo(-0.04, 0.14);
-    ctx.lineTo(0.05, 0.15);
-    ctx.lineTo(0.10, yg + 0.02);
-    ctx.stroke();
+    drawArm(pose, 0.095, -0.02, -0.14, 0.12, -0.11, 0.22, GUN_Y - 0.01);
+    drawArm(pose, 0.10, -0.04, 0.14, 0.05, 0.15, 0.10, GUN_Y + 0.02);
 
     // 3. Tronco (Biotipo mais largo e menos atlético, simulando casacos mais grossos)
     ctx.fillStyle = C.enemy;
@@ -223,39 +250,42 @@ function drawEnemy(e) {
     }
 
     // 5. Fuzil AK-47 (Metal cinza-ferro mais claro, contrastando com a madeira)
+    ctx.save();
+    applyGun(pose);
     ctx.fillStyle = "rgba(6, 9, 12, 0.35)"; // Sombra
-    ctx.fillRect(-0.03, yg - 0.01, 0.44, 0.03);
+    ctx.fillRect(-0.03, GUN_Y - 0.01, 0.44, 0.03);
 
     ctx.fillStyle = "#754524"; // Coronha de madeira
-    ctx.fillRect(-0.03, yg - 0.010, 0.08, 0.020);
+    ctx.fillRect(-0.03, GUN_Y - 0.010, 0.08, 0.020);
 
     ctx.fillStyle = "#5D6B78"; // Caixa da culatra (Aço cinzento/riscado)
-    ctx.fillRect(0.05, yg - 0.011, 0.12, 0.024);
+    ctx.fillRect(0.05, GUN_Y - 0.011, 0.12, 0.024);
 
     ctx.fillStyle = "#321E11"; // Carregador curvo escuro
     ctx.beginPath();
-    ctx.moveTo(0.09, yg - 0.011);
-    ctx.lineTo(0.12, yg - 0.011);
-    ctx.lineTo(0.145, yg - 0.038);
-    ctx.lineTo(0.115, yg - 0.040);
+    ctx.moveTo(0.09, GUN_Y - 0.011);
+    ctx.lineTo(0.12, GUN_Y - 0.011);
+    ctx.lineTo(0.145, GUN_Y - 0.038);
+    ctx.lineTo(0.115, GUN_Y - 0.040);
     ctx.closePath();
     ctx.fill();
 
     ctx.fillStyle = "#87522B"; // Telha / Guarda-mão de madeira clara
-    ctx.fillRect(0.17, yg - 0.011, 0.09, 0.022);
+    ctx.fillRect(0.17, GUN_Y - 0.011, 0.09, 0.022);
 
     ctx.fillStyle = "#4A5766"; // Cano em aço claro
-    ctx.fillRect(0.26, yg - 0.006, 0.12, 0.012);
+    ctx.fillRect(0.26, GUN_Y - 0.006, 0.12, 0.012);
 
     ctx.fillStyle = "#3B4754"; // Ponto de mira frontal
-    ctx.fillRect(0.38, yg - 0.010, 0.022, 0.020);
+    ctx.fillRect(0.38, GUN_Y - 0.010, 0.022, 0.020);
 
     // 6. Mãos (Sem luvas pesadas, tom de pele ou luvas simples civis)
     ctx.fillStyle = "#382E29";
     ctx.beginPath();
-    ctx.ellipse(0.10, yg + 0.012, 0.018, 0.014, 0.4, 0, 2 * Math.PI);
-    ctx.ellipse(0.23, yg - 0.006, 0.020, 0.014, -0.3, 0, 2 * Math.PI);
+    ctx.ellipse(0.10, GUN_Y + 0.012, 0.018, 0.014, 0.4, 0, 2 * Math.PI);
+    ctx.ellipse(0.23, GUN_Y - 0.006, 0.020, 0.014, -0.3, 0, 2 * Math.PI);
     ctx.fill();
+    ctx.restore();
 
     // 7. Cabeça e Chapéu/Boné/Capacete Simples
     ctx.fillStyle = "#3A4B5C"; // Gola simples
@@ -286,7 +316,7 @@ function drawEnemy(e) {
 }
 
 // Operadores com Carabina M4, Supressor e Passadas
-function drawOperator(o, col) {
+function drawOperator(o, col, pose) {
   ctx.save();
   ctx.translate(o.x, o.y);
   ctx.rotate(o.a);
@@ -308,27 +338,10 @@ function drawOperator(o, col) {
   ctx.ellipse(-0.15 - stride, 0.08, 0.05, 0.028, -0.1, 0, 2 * Math.PI);
   ctx.fill();
 
-  // Eixo da arma no ombro direito
-  const yg = 0.095;
-
   // 2. Braços (Mangas da farda táctica - Combat Shirt escura)
   ctx.strokeStyle = "#2C3642"; // Cor táctica uniforme (Cinza-azulado escuro)
-
-  // Braço esquerdo (Estendido a segurar o guarda-mão)
-  ctx.lineWidth = 0.09;
-  ctx.beginPath();
-  ctx.moveTo(-0.01, -0.15); // Ombro esquerdo
-  ctx.lineTo(0.12, -0.10);  // Cotovelo
-  ctx.lineTo(0.22, yg - 0.01); // Pulso
-  ctx.stroke();
-
-  // Braço direito (Fletido, no gatilho)
-  ctx.lineWidth = 0.095;
-  ctx.beginPath();
-  ctx.moveTo(-0.03, 0.15);  // Ombro direito
-  ctx.lineTo(0.04, 0.17);   // Cotovelo
-  ctx.lineTo(0.10, yg + 0.02); // Pulso
-  ctx.stroke();
+  drawArm(pose, 0.09, -0.01, -0.15, 0.12, -0.10, 0.22, GUN_Y - 0.01); // Braço esquerdo (Estendido a segurar o guarda-mão)
+  drawArm(pose, 0.095, -0.03, 0.15, 0.04, 0.17, 0.10, GUN_Y + 0.02); // Braço direito (Fletido, no gatilho)
 
   // 3. Tronco anatómico (Ombros largos e peito musculado com fardamento)
   ctx.fillStyle = "#2C3642"; // Farda táctica
@@ -356,49 +369,52 @@ function drawOperator(o, col) {
   }
 
   // 5. Carabina M4 (Tons cinza-chumbo "gunmetal", mais realista)
+  ctx.save();
+  applyGun(pose);
   ctx.fillStyle = "rgba(6, 9, 12, 0.35)"; // Sombra da arma
-  ctx.fillRect(-0.03, yg - 0.01, 0.44, 0.03);
+  ctx.fillRect(-0.03, GUN_Y - 0.01, 0.44, 0.03);
 
   ctx.fillStyle = "#455263"; // Coronha
-  ctx.fillRect(-0.03, yg - 0.009, 0.08, 0.018);
+  ctx.fillRect(-0.03, GUN_Y - 0.009, 0.08, 0.018);
   ctx.fillStyle = "#2A3441"; // Soleira borracha
-  ctx.fillRect(-0.04, yg - 0.012, 0.012, 0.024);
+  ctx.fillRect(-0.04, GUN_Y - 0.012, 0.012, 0.024);
 
   ctx.fillStyle = "#546478"; // Receiver (Caixa da culatra)
-  ctx.fillRect(0.05, yg - 0.011, 0.12, 0.022);
+  ctx.fillRect(0.05, GUN_Y - 0.011, 0.12, 0.022);
 
   ctx.fillStyle = "#384554"; // Carregador STANAG
   ctx.beginPath();
-  ctx.moveTo(0.09, yg - 0.011);
-  ctx.lineTo(0.12, yg - 0.011);
-  ctx.lineTo(0.135, yg - 0.036);
-  ctx.lineTo(0.105, yg - 0.036);
+  ctx.moveTo(0.09, GUN_Y - 0.011);
+  ctx.lineTo(0.12, GUN_Y - 0.011);
+  ctx.lineTo(0.135, GUN_Y - 0.036);
+  ctx.lineTo(0.105, GUN_Y - 0.036);
   ctx.closePath();
   ctx.fill();
 
   ctx.fillStyle = "#242F3A"; // Ótica Holográfica
-  ctx.fillRect(0.08, yg - 0.007, 0.045, 0.014);
+  ctx.fillRect(0.08, GUN_Y - 0.007, 0.045, 0.014);
   ctx.fillStyle = "#38BDF8"; // Lente ótica
-  ctx.fillRect(0.115, yg - 0.005, 0.006, 0.010);
+  ctx.fillRect(0.115, GUN_Y - 0.005, 0.006, 0.010);
 
   ctx.fillStyle = "#414E5E"; // Guarda-mão Picatinny
-  ctx.fillRect(0.17, yg - 0.010, 0.11, 0.020);
+  ctx.fillRect(0.17, GUN_Y - 0.010, 0.11, 0.020);
   ctx.fillStyle = "#2D3744"; // Ranhuras
   for (const rx of [0.19, 0.22, 0.25]) {
-    ctx.fillRect(rx, yg - 0.010, 0.012, 0.020);
+    ctx.fillRect(rx, GUN_Y - 0.010, 0.012, 0.020);
   }
 
   ctx.fillStyle = "#2A3441"; // Supressor cinza escuro
   ctx.beginPath();
-  ctx.roundRect(0.28, yg - 0.009, 0.14, 0.018, 0.003);
+  ctx.roundRect(0.28, GUN_Y - 0.009, 0.14, 0.018, 0.003);
   ctx.fill();
 
   // 6. Luvas tácticas
   ctx.fillStyle = "#222A33";
   ctx.beginPath();
-  ctx.ellipse(0.10, yg + 0.012, 0.020, 0.015, 0.4, 0, 2 * Math.PI); // Gatilho
-  ctx.ellipse(0.23, yg - 0.006, 0.022, 0.015, -0.3, 0, 2 * Math.PI); // Guarda-mão
+  ctx.ellipse(0.10, GUN_Y + 0.012, 0.020, 0.015, 0.4, 0, 2 * Math.PI); // Gatilho
+  ctx.ellipse(0.23, GUN_Y - 0.006, 0.022, 0.015, -0.3, 0, 2 * Math.PI); // Guarda-mão
   ctx.fill();
+  ctx.restore();
 
   // 7. Cabeça, Auriculares e Capacete
   ctx.fillStyle = "#25313D"; // Gola
@@ -528,18 +544,20 @@ export function draw() {
   });
 
   for (const t of state.tracers) {
+    const u = (t.en ? state.enemies : state.ops)[t.i];
+    const [mx, my] = muzzle(u, gunPose(u, t), t.en ? MUZZLE_EN : MUZZLE_OP);
     ctx.globalAlpha = Math.min(1, t.t / 0.1);
     ctx.strokeStyle = t.en ? C.enemy : C.ink;
     ctx.lineWidth = 0.05;
-    ctx.beginPath(); ctx.moveTo(t.x1, t.y1); ctx.lineTo(t.x2, t.y2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(t.tx, t.ty); ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
-  for (const e of state.enemies) {
-    if (!e.seen) continue;
-    if (!e.alive) { drawX(e.x, e.y, C.enemy, .5); continue; }
-    drawEnemy(e);
-  }
+  state.enemies.forEach((e, i) => {
+    if (!e.seen) return;
+    if (!e.alive) { drawX(e.x, e.y, C.enemy, .5); return; }
+    drawEnemy(e, gunPose(e, shotOf(true, i)));
+  });
 
   state.ops.forEach((o, i) => {
     const col = C.op[i];
@@ -554,6 +572,6 @@ export function draw() {
       ctx.beginPath(); ctx.arc(o.x, o.y, .45, 0, 7); ctx.stroke(); ctx.setLineDash([]);
     }
 
-    drawOperator(o, col);
+    drawOperator(o, col, gunPose(o, shotOf(false, i)));
   });
 }

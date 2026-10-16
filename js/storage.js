@@ -69,7 +69,8 @@ export function savePlan() {
       path: o.path.map(tileOf),
       aim: o.aim ? tileOf(o.aim) : null,
       steps: o.acts.map(a => typeof a === "number" ? { type: "move", tiles: a } : a.hold ? { type: "hold", index: o.holds.indexOf(a.hold) } : { type: "aim", previous: a.aim ? tileOf(a.aim) : null }),
-      holds: o.holds.map(h => ({ at: h.at, operator: h.op, triggerIndex: h.ti, hold: [h.hx, h.hy], trigger: [h.tx, h.ty] }))
+      holds: o.holds.map(h => ({ at: h.at, operator: h.op, triggerIndex: h.ti, hold: [h.hx, h.hy], trigger: [h.tx, h.ty] })),
+      order: Number.isFinite(o.planAt) ? o.planAt : null
     }))
   };
   schedulePersist();
@@ -129,10 +130,12 @@ export function restore() {
       o.path = s.path.map(center);
       o.aim = center(s.aim);
       o.holds = (s.holds || []).map(h => ({ at: h.at, op: h.operator, ti: h.triggerIndex, hx: h.hold[0], hy: h.hold[1], tx: h.trigger[0], ty: h.trigger[1] }));
+      o.planAt = s.order == null ? Infinity : s.order;
+      state.planSeq = Math.max(state.planSeq, s.order || 0);
       o.acts = s.steps.map(st => st.type === "move" ? st.tiles : st.type === "hold" ? { hold: o.holds[st.index] } : { aim: center(st.previous) }).filter(a => !(a && "hold" in a && !a.hold));
     });
     state.sel = p.selected;
-    state.mode = p.mode === "aim" ? "aim" : "move";
+    state.mode = p.mode === "aim" || p.mode === "move" ? p.mode : null;
   }
   if (!state.ops[state.sel] || !state.ops[state.sel].alive) {
     state.sel = state.ops.findIndex(o => o.alive);

@@ -39,22 +39,15 @@
     <div class="replay-bar">
       <button id="replayBtn">Replay</button>
       <button id="replayToggle">Pausar</button>
-      <input type="range" id="replaySlider" min="0" max="15" step="0.01" value="0">
-      <div class="seg" role="group">
-        <button id="spd05" aria-pressed="true">0.5×</button>
-        <button id="spd025" aria-pressed="false">0.25×</button>
-      </div>
+      <input type="range" id="timeline" min="0" max="15" step="0.01" value="0">
+      <span class="time" id="timeTxt"></span>
+      <button id="replaySpeed" title="Velocidade do replay">1×</button>
       <button id="replayClose">Sair</button>
     </div>
 
     <!-- Área tática do mapa -->
     <div class="stage" id="stage">
       <canvas id="cv" aria-label="Mapa tático"></canvas>
-      <div class="clock" id="clock" hidden>
-        <span id="clockTxt"></span>
-        <i><b id="clockBar"></b></i>
-        <small id="clockSpeed" style="cursor:pointer" title="Clique para alternar a velocidade">½×</small>
-      </div>
       <div class="over" id="over" hidden>
         <p id="overMsg"></p>
         <button id="again">Jogar de novo</button>
@@ -126,13 +119,14 @@
           <button data-close>Fechar</button>
         </div>
         <div class="sheet-body">
-          <p>Toque num operador para selecioná-lo. No modo Mover, cada toque no mapa soma um trecho à rota. No modo
+          <p>Sem nenhum modo ativo, toque num operador no mapa para selecioná-lo; tocar de novo no botão do modo ativo
+            o desliga. No modo Mover, cada toque no mapa soma um trecho à rota, inclusive até a casa de outro operador. No modo
             Mirar, toque onde ele deve apontar quando parar. As casas destacadas mostram o que ele vai enxergar dali (as
             mais claras ficam atrás de caixas).</p>
           <p>No turno 1 você escolhe por onde entrar: os quadrados tracejados são as vagas das entradas. Mapas com pelo
             menos 6 salas e corredores somados têm duas, nos cantos superior esquerdo e inferior direito. Os menores têm
-            uma só, sorteada entre esses dois cantos. Com um operador selecionado, toque numa vaga livre para levá-lo
-            até ela. A rota dele é apagada. A abertura na parede externa de cada entrada marca por onde o esquadrão
+            uma só, sorteada entre esses dois cantos. Com um operador selecionado, no modo Mover, toque numa vaga livre para
+            levá-lo até ela. A rota dele é apagada. A abertura na parede externa de cada entrada marca por onde o esquadrão
             chegou.</p>
           <p>Planeje o esquadrão inteiro e toque em Executar: todos agem ao mesmo tempo. Inimigos só aparecem quando
             alguém os enxerga, e pegar um alvo de costas é a melhor jogada. Caixas dão cobertura parcial. Portas
@@ -146,13 +140,16 @@
           <p>Esperar sincroniza a equipe: com um operador selecionado, toque num ponto da rota dele (ou nele mesmo) para
             marcar onde ele para. Depois toque num ponto da rota de outro operador: quando esse outro passar por ali, o
             primeiro segue. Se quem dá o sinal cair, a espera é liberada.</p>
-          <p>Operadores nunca ocupam a mesma casa. Quem encontrar a próxima casa ocupada fica parado (anel tracejado)
-            até ela liberar. Cada turno dura no máximo 15 s de ação, mostrados no relógio do mapa, e a execução roda em
-            câmera lenta (metade da velocidade). Aos 15 s tudo congela, até tiroteios. Tempo parado por bloqueio ou
+          <p>Operadores nunca ocupam a mesma casa. Em qualquer disputa de casa vence a rota criada primeiro: se duas
+            rotas terminam na mesma casa, a criada depois é cortada antes dela, e quem está parado sem rota mantém a
+            sua casa. Quem encontrar a próxima casa ocupada fica parado (anel tracejado) até ela liberar. Cada turno
+            dura no máximo 15 s de ação, mostrados na barra de tempo acima do mapa. Aos 15 s tudo congela, até tiroteios. Tempo parado por bloqueio ou
             espera é tempo a menos andando. Quem congelar no meio de um passo termina esse passo no começo do turno
             seguinte.</p>
+          <p>Replay: a mesma barra de tempo permite avançar ou voltar; o botão de velocidade alterna entre 1×, 0.5× e
+            0.25×.</p>
           <p>Zoom: pinça no celular ou roda do mouse. Com zoom, arraste o mapa para movê-lo.</p>
-          <p>Atalhos: 1 a 4 seleciona, M move, A mira, E espera, Z desfaz, R replay, Enter executa.</p>
+          <p>Atalhos: 1 a 4 seleciona, M move, A mira, E espera (de novo desliga o modo), Z desfaz, R replay, Enter executa.</p>
         </div>
       </div>
     </div>

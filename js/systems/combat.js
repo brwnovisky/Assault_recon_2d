@@ -1,4 +1,4 @@
-import { DT, TURN, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, NAMES } from "../config.js";
+import { DT, TURN, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, NAMES, TRACER_LIFE } from "../config.js";
 import { state, say } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
 
@@ -10,10 +10,9 @@ function shoot(u, t, d) {
   if (u.moving) p *= 0.75;
   const hit = Math.random() < p, j = hit ? 0 : 0.9;
   state.tracers.push({
-    x1: u.x, y1: u.y,
-    x2: t.x + (Math.random() - .5) * j,
-    y2: t.y + (Math.random() - .5) * j,
-    t: 0.14, en: u.id < 0
+    tx: t.x + (Math.random() - .5) * j,
+    ty: t.y + (Math.random() - .5) * j,
+    t: TRACER_LIFE, en: u.id < 0, i: u.id < 0 ? state.enemies.indexOf(u) : u.id
   });
   u.cd = u.id < 0 ? 0.55 : 0.4;
   state.lastShot = state.simTime;

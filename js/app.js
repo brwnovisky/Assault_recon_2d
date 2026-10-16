@@ -6,7 +6,7 @@ import { pathLen } from "./pathfinding.js";
 import { generate } from "./map-generator.js";
 import { step } from "./systems/simulation.js";
 import { select, setMode, undo, clearPlan, tapTile } from "./systems/planning.js";
-import { setSpeed, recordReplay, startReplay, stepReplay, toggleReplay, seekReplay, endReplay } from "./systems/replay.js";
+import { cycleSpeed, recordReplay, startReplay, stepReplay, toggleReplay, seekReplay, endReplay } from "./systems/replay.js";
 import { initRenderer, layout, zoomAt, clampView, drawStatic, draw } from "./systems/render.js";
 
 const $ = id => document.getElementById(id);
@@ -28,7 +28,7 @@ function toPlan() {
   state.tracers.length = 0;
   for (const o of state.ops) {
     o.path = []; o.acts = []; o.pi = 0; o.aim = null; o.target = null;
-    o.holds = []; o.waiting = false; o.lock = 0;
+    o.holds = []; o.waiting = false; o.lock = 0; o.planAt = Infinity;
     if (o.alive && o.lockTo >= 0) {
       o.path = [{ x: (o.lockTo % state.W) + .5, y: ((o.lockTo / state.W) | 0) + .5 }];
       o.lock = 1;
@@ -81,7 +81,7 @@ function frame(t) {
   const real = lastT ? Math.min(0.1, (t - lastT) / 1000) : 0;
   if (state.status === "exec") {
     lastT = t;
-    acc += real * state.slowMo;
+    acc += real;
     while (acc >= DT && state.status === "exec") {
       step({ finish, freezeTurn });
       recordReplay();
@@ -94,12 +94,11 @@ function frame(t) {
   } else if (state.status === "replay") {
     lastT = t;
     if (!state.replayPaused) {
-      acc += real * state.slowMo;
+      acc += real * state.replaySpeed;
       while (acc >= DT && state.status === "replay") {
         stepReplay();
         acc -= DT;
       }
-      $("replaySlider").value = state.simTime;
     }
   } else {
     lastT = 0;
@@ -107,14 +106,8 @@ function frame(t) {
 
   draw();
 
-  const ck = $("clock"), live = state.status === "exec" || state.status === "freeze" || state.status === "replay";
-  ck.hidden = !live;
-  if (live) {
-    const tt = Math.min(state.simTime, MOVE_TIME);
-    $("clockTxt").textContent = state.status === "replay" ? `Replay: ${tt.toFixed(1).replace(".", ",")} s` : `${tt.toFixed(1).replace(".", ",")} s / ${MOVE_TIME} s`;
-    $("clockBar").style.width = (tt / MOVE_TIME * 100) + "%";
-    ck.classList.toggle("frozen", state.status === "freeze");
-  }
+  const live = state.status === "exec" || state.status === "freeze" || state.status === "replay";
+  timeline(live);
 
   if (state.uiDirty) {
     ui();
@@ -122,6 +115,16 @@ function frame(t) {
     savePlan();
   }
   if (live) req();
+}
+
+// Barra de tempo única: progresso da execução ou posição do replay
+function timeline(live) {
+  const tl = $("timeline"), replay = state.status === "replay", tt = live ? Math.min(state.simTime, MOVE_TIME) : 0;
+  const s = tt.toFixed(1).replace(".", ",");
+  tl.max = replay ? state.lastReplay[state.lastReplay.length - 1].simTime : MOVE_TIME;
+  tl.value = tt;
+  tl.classList.toggle("frozen", state.status === "freeze");
+  $("timeTxt").textContent = !live ? "" : replay ? `Replay: ${s} s` : `${s} s / ${MOVE_TIME} s`;
 }
 
 const squad = $("squad");
@@ -162,12 +165,9 @@ function ui() {
   $("go").disabled = state.status !== "plan";
   $("replayBtn").disabled = state.status !== "plan" || !state.lastReplay || !state.lastReplay.length;
   $("over").hidden = state.status !== "over";
-  for (const id of ["replayToggle", "replaySlider", "replayClose"]) $(id).disabled = state.status !== "replay";
+  for (const id of ["replayToggle", "timeline", "replayClose"]) $(id).disabled = state.status !== "replay";
   $("replayToggle").textContent = state.replayPaused ? "Reproduzir" : "Pausar";
-  if (state.status === "replay") $("replaySlider").max = state.lastReplay[state.lastReplay.length - 1].simTime;
-  $("spd05").setAttribute("aria-pressed", String(state.slowMo === 0.5));
-  $("spd025").setAttribute("aria-pressed", String(state.slowMo === 0.25));
-  $("clockSpeed").textContent = state.slowMo === 0.5 ? "½×" : "¼×";
+  $("replaySpeed").textContent = `${state.replaySpeed}×`;
 }
 
 function tapAt(e) {
@@ -258,11 +258,8 @@ function setupEvents() {
   // Controlos da linha do tempo do Replay
   $("replayClose").addEventListener("click", () => endReplay(req));
   $("replayToggle").addEventListener("click", toggleReplay);
-  $("replaySlider").addEventListener("input", e => { seekReplay(parseFloat(e.target.value)); req(); });
-
-  $("spd05").addEventListener("click", () => { setSpeed(0.5); req(); });
-  $("spd025").addEventListener("click", () => { setSpeed(0.25); req(); });
-  $("clockSpeed").addEventListener("click", () => { setSpeed(state.slowMo === 0.5 ? 0.25 : 0.5); req(); });
+  $("timeline").addEventListener("input", e => { seekReplay(parseFloat(e.target.value)); req(); });
+  $("replaySpeed").addEventListener("click", () => { cycleSpeed(); req(); });
 
   addEventListener("keydown", e => {
     if (document.querySelector(".sheet:not([hidden])")) {

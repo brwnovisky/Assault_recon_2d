@@ -1,3 +1,4 @@
+import { REPLAY_SPEEDS } from "../config.js";
 import { state, say, setDoor } from "../state.js";
 import { updateVis } from "../entities/enemy.js";
 
@@ -29,8 +30,8 @@ function applySnapshot(s) {
   state.uiDirty = true;
 }
 
-export function setSpeed(s) {
-  state.slowMo = s;
+export function cycleSpeed() {
+  state.replaySpeed = REPLAY_SPEEDS[(REPLAY_SPEEDS.indexOf(state.replaySpeed) + 1) % REPLAY_SPEEDS.length];
   state.uiDirty = true;
 }
 

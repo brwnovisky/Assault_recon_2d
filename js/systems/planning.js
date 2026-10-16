@@ -1,7 +1,7 @@
 import { MOVE_BUDGET, NAMES } from "../config.js";
 import { state, say } from "../state.js";
 import { bfs, pathLen } from "../pathfinding.js";
-import { redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs } from "../entities/operator.js";
+import { redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs, endOf, byPriority } from "../entities/operator.js";
 
 export function select(i) {
   if (state.status !== "plan" || !state.ops[i] || !state.ops[i].alive) return;
@@ -11,7 +11,7 @@ export function select(i) {
 }
 
 export function setMode(m) {
-  state.mode = m;
+  state.mode = state.mode === m ? null : m;
   state.pendingHold = null;
   state.uiDirty = true;
 }
@@ -22,8 +22,9 @@ export function undo() {
   if (typeof a === "number") o.path.length -= a;
   else if (a.hold) o.holds = o.holds.filter(x => x !== a.hold);
   else o.aim = a.aim;
+  if (o.path.length === o.lock) o.planAt = Infinity;
   state.pendingHold = null;
-  pruneHolds();
+  resolveEnds();
   state.uiDirty = true;
 }
 
@@ -33,8 +34,9 @@ export function clearPlan() {
   o.acts = [];
   o.aim = null;
   o.holds = [];
+  o.planAt = Infinity;
   state.pendingHold = null;
-  pruneHolds();
+  resolveEnds();
   state.uiDirty = true;
 }
 
@@ -76,13 +78,46 @@ function waitTap(o, tx, ty) {
   say("Esse ponto não está na rota de outro operador. Espera cancelada.");
 }
 
+const tileKey = p => (p.y | 0) * state.W + (p.x | 0);
+
+function trimEnd(o) {
+  o.path.pop();
+  for (let i = o.acts.length - 1; i >= 0; i--) if (typeof o.acts[i] === "number") {
+    if (--o.acts[i] === 0) o.acts.splice(i, 1);
+    break;
+  }
+  if (o.path.length === o.lock) o.planAt = Infinity;
+}
+
+// Dois operadores nunca terminam na mesma casa: a rota de menor prioridade é cortada até liberar
+function resolveEnds() {
+  const cut = new Map();
+  for (let changed = true; changed;) {
+    changed = false;
+    const ends = new Map();
+    for (const u of state.ops.filter(u => u.alive).sort(byPriority)) {
+      const k = tileKey(endOf(u));
+      if (ends.has(k) && u.path.length > u.lock) {
+        cut.set(u.id, ends.get(k));
+        trimEnd(u);
+        changed = true;
+        break;
+      }
+      ends.set(k, u.id);
+    }
+  }
+  for (const [id, by] of cut) say(`Rota de ${NAMES[id]} cortada: ${NAMES[by]} tem prioridade nessa casa.`);
+  pruneHolds();
+}
+
 export function tapTile(tx, ty) {
   if (state.status !== "plan") return;
   if (tx < 0 || ty < 0 || tx >= state.W || ty >= state.H) return;
   const hit = state.ops.findIndex(o => o.alive && (o.x | 0) === tx && (o.y | 0) === ty);
-  if (hit >= 0 && hit !== state.sel && state.mode === "move") { select(hit); return; }
+  if (!state.mode) { if (hit >= 0) select(hit); return; }
   if (state.turn === 1 && state.mode === "move" && hit < 0 && slotIndex(tx, ty) >= 0) {
     redeploy(state.ops[state.sel], tx, ty);
+    resolveEnds();
     return;
   }
   const o = state.ops[state.sel];
@@ -93,7 +128,7 @@ export function tapTile(tx, ty) {
     o.aim = { x: tx + .5, y: ty + .5 };
   } else {
     if (hit === state.sel) return;
-    const s = o.path.length ? o.path[o.path.length - 1] : o;
+    const s = endOf(o);
     const full = bfs(s.x | 0, s.y | 0, tx, ty);
     if (!full) {
       say(state.solid[ty * state.W + tx] ? "Esse ponto está bloqueado." : "Sem caminho até ali.");
@@ -107,8 +142,10 @@ export function tapTile(tx, ty) {
     }
     if (!n) { say(`${NAMES[o.id]} já usou todo o movimento do turno.`); return; }
     if (n < full.length) say(`Rota cortada no limite de movimento de ${NAMES[o.id]}.`);
+    if (o.path.length === o.lock) o.planAt = ++state.planSeq;
     o.path.push(...full.slice(0, n));
     o.acts.push(n);
+    resolveEnds();
   }
   state.uiDirty = true;
 }

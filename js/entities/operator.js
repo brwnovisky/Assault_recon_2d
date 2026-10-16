@@ -6,6 +6,12 @@ import { updateVis } from "./enemy.js";
 
 export const createOperator = (x, y, id) => createUnit(x, y, 3, id);
 
+export const endOf = o => o.path.length ? o.path[o.path.length - 1] : o;
+
+// Prioridade nas disputas de casa: sem rota própria (-1) mantém a casa; senão vence a rota criada antes
+const priority = o => o.path.length > o.lock ? o.planAt : -1;
+export const byPriority = (a, b) => (priority(a) - priority(b)) || (a.id - b.id);
+
 export const tileIs = (p, x, y) => p && (p.x | 0) === x && (p.y | 0) === y;
 
 export function dependsOn(a, b) {
@@ -49,6 +55,7 @@ export function redeploy(o, x, y) {
   o.acts = [];
   o.aim = null;
   o.holds = [];
+  o.planAt = Infinity;
   faceDoor(o);
   pruneHolds();
   for (const e of state.enemies) e.seen = false;

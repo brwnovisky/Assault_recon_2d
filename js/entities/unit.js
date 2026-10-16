@@ -6,7 +6,7 @@ export function createUnit(x, y, hp, id) {
     hp, max: hp, alive: true, id,
     target: null, react: 0, cd: 0, moving: false,
     path: [], acts: [], aim: null, pi: 0, holds: [],
-    waiting: false, lock: 0, lockFrom: -1, lockTo: -1,
+    waiting: false, lock: 0, lockFrom: -1, lockTo: -1, planAt: Infinity,
     alert: false, heard: null, seen: false, vis: false
   };
 }

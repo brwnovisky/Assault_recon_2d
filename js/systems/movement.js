@@ -1,12 +1,12 @@
 import { DT, SPEED, MOVE_TIME, NAMES } from "../config.js";
 import { state, say, setDoor } from "../state.js";
+import { byPriority } from "../entities/operator.js";
 
 function blocker(o, k) {
   const cx = o.cur % state.W, cy = (o.cur / state.W) | 0;
   const nx = k % state.W, ny = (k / state.W) | 0;
   const diag = cx !== nx && cy !== ny;
   const k1 = cy * state.W + nx, k2 = ny * state.W + cx;
-  const tx = nx + 0.5, ty = ny + 0.5;
 
   for (const u of state.ops) {
     if (u === o || !u.alive) continue;
@@ -14,17 +14,16 @@ function blocker(o, k) {
     // Impede a travessia na mesma diagonal em sentidos opostos
     if (diag && ((u.cur === k1 && u.res === k2) || (u.cur === k2 && u.res === k1))) return u;
 
-    if (u.cur === k || u.res === k) {
-      // Só bloqueia se o aliado estiver exatamente parado no centro do tile
-      const dx = u.x - tx, dy = u.y - ty;
-      if (dx * dx + dy * dy < 0.0001) return u;
-    }
+    // Casa já reservada por outro operador
+    if (u.res === k) return u;
+    // Aliado parado na casa (não está saindo dela)
+    if (u.cur === k && u.res < 0) return u;
   }
   return null;
 }
 
 export function moveOperators() {
-  for (const o of state.ops) {
+  for (const o of state.ops.slice().sort(byPriority)) {
     if (!o.alive) continue;
     o.moving = false; o.want = o.a; o.waiting = false; o.blocked = false;
     const h = o.holds.find(h => !h.done && h.at === o.pi);
