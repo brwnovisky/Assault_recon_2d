@@ -459,3 +459,181 @@ export function draw() {
 }
 
 
+   ctx.fillStyle = "#63391A";
+      ctx.fillRect(-0.01, 0.065, 0.06, 0.035);
+
+      ctx.fillStyle = "#1E2630";
+      ctx.fillRect(0.05, 0.055, 0.13, 0.055);
+
+      ctx.fillStyle = "#2B1A10";
+      ctx.beginPath();
+      ctx.moveTo(0.14, 0.06);
+      ctx.quadraticCurveTo(0.18, 0.02, 0.22, -0.01);
+      ctx.lineTo(0.24, 0.02);
+      ctx.quadraticCurveTo(0.20, 0.05, 0.17, 0.08);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#7A4720";
+      ctx.fillRect(0.18, 0.06, 0.08, 0.045);
+
+      ctx.fillStyle = "#27313A";
+      ctx.fillRect(0.26, 0.07, 0.14, 0.024);
+      ctx.fillStyle = "#151B22";
+      ctx.fillRect(0.38, 0.06, 0.02, 0.044);
+      ctx.fillStyle = "#0E1318";
+      ctx.fillRect(0.40, 0.066, 0.03, 0.032);
+
+      ctx.fillStyle = "#151B22";
+      ctx.beginPath();
+      ctx.arc(0.14, 0.09, 0.034, 0, 2 * Math.PI);
+      ctx.arc(0.25, 0.075, 0.034, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.fillStyle = C.enemy;
+      ctx.beginPath();
+      ctx.arc(-0.02, 0, 0.14, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.lineWidth = 0.035;
+      ctx.strokeStyle = C.board;
+      ctx.stroke();
+
+      ctx.fillStyle = "#0E1318";
+      ctx.beginPath();
+      ctx.arc(0.04, 0, 0.09, -Math.PI / 2.4, Math.PI / 2.4);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = C.enemy; ctx.lineWidth = .06; ctx.globalAlpha = .6;
+      ctx.beginPath();
+      ctx.ellipse(-0.06, 0, 0.13, 0.22, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0.05, 0.08); ctx.lineTo(0.42, 0.08);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Operadores com Carabina M4, Supressor e Passadas
+  state.ops.forEach((o, i) => {
+    const col = C.op[i];
+    if (!o.alive) { drawX(o.x, o.y, col, .6); return; }
+
+    if (i === state.sel && state.status === "plan") {
+      ctx.strokeStyle = col; ctx.lineWidth = .05; ctx.beginPath(); ctx.arc(o.x, o.y, .46, 0, 7); ctx.stroke();
+    }
+
+    if (state.status === "exec" && o.blocked) {
+      ctx.strokeStyle = C.enemy; ctx.lineWidth = .05; ctx.setLineDash([.08, .08]);
+      ctx.beginPath(); ctx.arc(o.x, o.y, .45, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    ctx.rotate(o.a);
+
+    const isMoving = (state.status === "exec" || state.status === "replay") && o.moving;
+    const legCadence = isMoving ? state.simTime * 14 : 0;
+    const stride = isMoving ? Math.sin(legCadence) * 0.14 : 0;
+
+    // Botas
+    ctx.fillStyle = "#10161D";
+    ctx.beginPath();
+    ctx.ellipse(-0.06 + stride, -0.12, 0.085, 0.045, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = "#070B0E";
+    ctx.beginPath();
+    ctx.arc(-0.01 + stride, -0.12, 0.04, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#10161D";
+    ctx.beginPath();
+    ctx.ellipse(-0.06 - stride, 0.12, 0.085, 0.045, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = "#070B0E";
+    ctx.beginPath();
+    ctx.arc(-0.01 - stride, 0.12, 0.04, -Math.PI / 2, Math.PI / 2);
+    ctx.fill();
+
+    // Tronco
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(-0.06, 0, 0.14, 0.23, 0, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = "#0D131A";
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(-0.19, -0.13, 0.09, 0.26);
+    ctx.globalAlpha = 1;
+
+    // Braços
+    ctx.lineWidth = 0.08;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(-0.04, -0.18); ctx.lineTo(0.12, -0.06); ctx.lineTo(0.27, 0.068);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-0.04, 0.18); ctx.lineTo(0.11, 0.15); ctx.lineTo(0.14, 0.085);
+    ctx.stroke();
+
+    // Fuzil M4
+    ctx.fillStyle = "#2D3742";
+    ctx.fillRect(-0.02, 0.068, 0.07, 0.03);
+    ctx.fillStyle = "#121820";
+    ctx.fillRect(-0.03, 0.063, 0.016, 0.04);
+
+    ctx.fillStyle = "#1E2935";
+    ctx.fillRect(0.05, 0.06, 0.14, 0.046);
+
+    ctx.fillStyle = "#111822";
+    ctx.fillRect(0.08, 0.045, 0.08, 0.025);
+    ctx.fillStyle = "#38BDF8";
+    ctx.fillRect(0.14, 0.049, 0.015, 0.016);
+
+    ctx.fillStyle = "#111822";
+    ctx.fillRect(0.15, 0.046, 0.04, 0.025);
+
+    ctx.fillStyle = "#2A3644";
+    ctx.fillRect(0.19, 0.063, 0.11, 0.04);
+    ctx.strokeStyle = "#17202A";
+    ctx.lineWidth = 0.012;
+    ctx.beginPath();
+    ctx.moveTo(0.22, 0.063); ctx.lineTo(0.22, 0.103);
+    ctx.moveTo(0.26, 0.063); ctx.lineTo(0.26, 0.103);
+    ctx.stroke();
+
+    ctx.fillStyle = "#1A232D";
+    ctx.beginPath();
+    ctx.roundRect(0.30, 0.062, 0.15, 0.042, 0.01);
+    ctx.fill();
+    ctx.fillStyle = "#0A0E13";
+    ctx.fillRect(0.44, 0.068, 0.015, 0.03);
+
+    ctx.fillStyle = "#121820";
+    ctx.beginPath();
+    ctx.arc(0.14, 0.085, 0.038, 0, 2 * Math.PI);
+    ctx.arc(0.27, 0.068, 0.036, 0, 2 * Math.PI);
+    ctx.fill();
+
+    // Capacete e Visor
+    ctx.beginPath();
+    ctx.arc(-0.02, 0, 0.15, 0, 2 * Math.PI);
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.lineWidth = 0.035;
+    ctx.strokeStyle = C.board;
+    ctx.stroke();
+
+    ctx.fillStyle = "#0A0E13";
+    ctx.beginPath();
+    ctx.arc(0.03, 0, 0.11, -Math.PI / 3, Math.PI / 3);
+    ctx.lineTo(0.05, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  });
+}
+
+
