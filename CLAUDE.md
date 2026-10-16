@@ -8,10 +8,11 @@
 - Operators and enemies come from `createUnit` (`entities/unit.js`). Behavior shared by both units goes there.
 - Replay frames and the pre-replay save share `snapshot`/`applySnapshot` in `systems/replay.js`. Add new replayed fields to the key lists, not to new copy code.
 - Execution always runs at 1.0x. `state.replaySpeed` (cycled through `REPLAY_SPEEDS`) affects only replay playback.
-- One timeline (`#timeline`, `#timeTxt`) shows execution progress and seeks the replay. `timeline()` in `app.js` updates it every frame.
+- One timeline (`#timeline`) shows execution progress and seeks the replay. It sits on top of the map inside `.board`; `contain: inline-size` makes it as wide as the canvas. `timeline()` in `app.js` updates it every frame, and `ticks()` draws a mark every second with labels every 1/2/5/10 s depending on width. The time label (`#timeTxt`) and the replay buttons stay in the top `.replay-bar`.
+- Tick marks and the progress fill share the 14px thumb geometry: `calc(7px + (100% - 14px) * fraction)`.
 - `state.mode` can be `null`. With no mode active, a map tap selects an operator; pressing the active mode's button or key turns it off.
 - Position conflicts are resolved by path-creation priority (`priority`/`byPriority` in `entities/operator.js`). An operator without its own route keeps its tile; otherwise the route created earlier (`planAt`, from `state.planSeq`) wins. `resolveEnds()` in `planning.js` keeps planned end tiles unique by trimming lower-priority routes. `moveOperators()` processes operators in priority order, and `blocker()` never lets two operators reserve the same tile.
-- The canvas uses a fractional tile size (`layout()` in `render.js`), so the map exactly fills the stage's limiting side. The stage size must never depend on content that changes between states: `flex: 1`/`min-height: 0` for the stage, and fixed-height HUD rows (for example `.chip .mv` keeps `min-height` when empty).
+- The canvas uses a fractional tile size (`layout()` in `render.js`), so the map exactly fills the stage's limiting side, minus whatever else is in `.board` (the time bar and gap). The stage size must never depend on content that changes between states: `flex: 1`/`min-height: 0` for the stage, and fixed-height HUD rows (for example `.chip .mv` keeps `min-height` when empty).
 - Tracers store only the shot's end point (`tx`, `ty`, hit or miss) and the shooter (`en`, `i`). `render.js` draws them from the shooter's current muzzle, and `gunPose` aims the arms and weapon at the end point, with recoil decaying over `TRACER_LIFE`.
 
 ## Verifying changes

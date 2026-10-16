@@ -39,7 +39,6 @@
     <div class="replay-bar">
       <button id="replayBtn">Replay</button>
       <button id="replayToggle">Pausar</button>
-      <input type="range" id="timeline" min="0" max="15" step="0.01" value="0">
       <span class="time" id="timeTxt"></span>
       <button id="replaySpeed" title="Velocidade do replay">1×</button>
       <button id="replayClose">Sair</button>
@@ -47,7 +46,14 @@
 
     <!-- Área tática do mapa -->
     <div class="stage" id="stage">
-      <canvas id="cv" aria-label="Mapa tático"></canvas>
+      <div class="board">
+        <!-- Barra de tempo: mesma largura do mapa, marcas a cada segundo -->
+        <div class="timebar">
+          <input type="range" id="timeline" min="0" max="15" step="0.01" value="0" aria-label="Tempo do turno">
+          <div class="ticks" id="ticks"></div>
+        </div>
+        <canvas id="cv" aria-label="Mapa tático"></canvas>
+      </div>
       <div class="over" id="over" hidden>
         <p id="overMsg"></p>
         <button id="again">Jogar de novo</button>

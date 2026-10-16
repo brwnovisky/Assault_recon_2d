@@ -120,11 +120,29 @@ function frame(t) {
 // Barra de tempo única: progresso da execução ou posição do replay
 function timeline(live) {
   const tl = $("timeline"), replay = state.status === "replay", tt = live ? Math.min(state.simTime, MOVE_TIME) : 0;
-  const s = tt.toFixed(1).replace(".", ",");
-  tl.max = replay ? state.lastReplay[state.lastReplay.length - 1].simTime : MOVE_TIME;
+  const s = tt.toFixed(1).replace(".", ","), max = replay ? state.lastReplay[state.lastReplay.length - 1].simTime : MOVE_TIME;
+  tl.max = max;
   tl.value = tt;
+  tl.style.setProperty("--p", tt / max);
+  ticks(max);
   tl.classList.toggle("frozen", state.status === "freeze");
   $("timeTxt").textContent = !live ? "" : replay ? `Replay: ${s} s` : `${s} s / ${MOVE_TIME} s`;
+}
+
+// Marca a cada segundo; rótulos a cada 1, 2, 5 ou 10 s, conforme a largura disponível
+let ticksKey = "";
+function ticks(max) {
+  const el = $("ticks"), px = el.clientWidth / max;
+  const step = [1, 2, 5, 10].find(s => px * s >= 30) || 10, key = `${max}|${step}`;
+  if (key === ticksKey) return;
+  ticksKey = key;
+  el.innerHTML = "";
+  for (let s = 0; s <= max + 1e-9; s++) {
+    const t = document.createElement("i");
+    t.style.setProperty("--f", s / max);
+    if (s % step === 0) t.dataset.s = s;
+    el.appendChild(t);
+  }
 }
 
 const squad = $("squad");

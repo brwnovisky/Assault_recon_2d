@@ -28,8 +28,10 @@ export function zoomAt(nz, px, py, req) {
 }
 
 export function layout(req) {
-  const { width: w, height: h } = document.getElementById("stage").getBoundingClientRect();
-  if (!w || !h) return;
+  // Espaço do mapa: o palco menos o que o acompanha no quadro (barra de tempo e espaçamento)
+  const st = document.getElementById("stage").getBoundingClientRect();
+  const w = st.width, h = st.height - (cv.parentElement.getBoundingClientRect().height - cv.getBoundingClientRect().height);
+  if (!w || h <= 0) return;
   // Casa fracionária: o mapa ocupa todo o lado limitante do palco
   TS = Math.max(6, Math.min(w / state.W, h / state.H));
   dpr = Math.min(2, window.devicePixelRatio || 1);
