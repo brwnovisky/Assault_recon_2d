@@ -424,10 +424,10 @@ export function draw() {
     // Eixo da arma no ombro direito
     const yg = 0.095;
 
-    // 2. Braços (Linhas espessas e arredondadas simulando musculatura/farda)
+    // 2. Braços (Mangas da farda táctica - Combat Shirt escura)
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = col;
+    ctx.strokeStyle = "#2C3642"; // Cor táctica uniforme (Cinza-azulado escuro)
 
     // Braço esquerdo (Estendido a segurar o guarda-mão)
     ctx.lineWidth = 0.09;
@@ -445,16 +445,16 @@ export function draw() {
     ctx.lineTo(0.10, yg + 0.02); // Pulso
     ctx.stroke();
 
-    // 3. Tronco anatómico (Ombros largos e peito musculado)
-    ctx.fillStyle = col;
+    // 3. Tronco anatómico (Ombros largos e peito musculado com fardamento)
+    ctx.fillStyle = "#2C3642"; // Farda táctica
     ctx.beginPath();
     ctx.ellipse(-0.04, 0.01, 0.14, 0.21, 0.05, 0, 2 * Math.PI); // Massa central
     ctx.ellipse(0.02, -0.08, 0.07, 0.10, -0.2, 0, 2 * Math.PI); // Peitoral esquerdo
     ctx.ellipse(0.02, 0.08, 0.07, 0.10, 0.2, 0, 2 * Math.PI);  // Peitoral direito
     ctx.fill();
 
-    // 4. Colete balístico táctico (Sem contornos pretos, tons acinzentados)
-    ctx.fillStyle = "#27313D";
+    // 4. Colete balístico táctico
+    ctx.fillStyle = "#202832";
     ctx.beginPath();
     ctx.roundRect(-0.09, -0.11, 0.15, 0.22, 0.04);
     ctx.fill();
@@ -463,7 +463,7 @@ export function draw() {
     ctx.fillRect(-0.06, -0.14, 0.08, 0.036);
     ctx.fillRect(-0.06, 0.104, 0.08, 0.036);
 
-    ctx.fillStyle = "#1E2732"; // Bolsas MOLLE
+    ctx.fillStyle = "#1E2732"; // Bolsas MOLLE frontais
     for (const py of [-0.06, -0.01, 0.04]) {
       ctx.beginPath();
       ctx.roundRect(-0.01, py, 0.045, 0.038, 0.01);
@@ -508,8 +508,8 @@ export function draw() {
     ctx.roundRect(0.28, yg - 0.009, 0.14, 0.018, 0.003);
     ctx.fill();
 
-    // 6. Luvas tácticas (Cor natural, encaixadas suavemente)
-    ctx.fillStyle = "#2E3A47";
+    // 6. Luvas tácticas
+    ctx.fillStyle = "#222A33";
     ctx.beginPath();
     ctx.ellipse(0.10, yg + 0.012, 0.020, 0.015, 0.4, 0, 2 * Math.PI); // Gatilho
     ctx.ellipse(0.23, yg - 0.006, 0.022, 0.015, -0.3, 0, 2 * Math.PI); // Guarda-mão
@@ -521,10 +521,23 @@ export function draw() {
     ctx.ellipse(-0.03, 0.015, 0.065, 0.055, 0, 0, 2 * Math.PI);
     ctx.fill();
 
-    ctx.fillStyle = col; // Capacete
+    ctx.fillStyle = "#222A33"; // Capacete táctico escuro padrão
     ctx.beginPath();
     ctx.ellipse(-0.04, 0.020, 0.09, 0.085, 0, 0, 2 * Math.PI);
     ctx.fill();
+
+    // Marcador IFF (Identify Friend/Foe): Losango brilhante no topo do capacete identificando o operador
+    ctx.fillStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(-0.01, 0.020);  // Frente
+    ctx.lineTo(-0.04, 0.040);  // Lado direito
+    ctx.lineTo(-0.07, 0.020);  // Trás
+    ctx.lineTo(-0.04, 0.000);  // Lado esquerdo
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0; // Resetar o blur
 
     ctx.fillStyle = "#2C3845"; // Auriculares ComTac cinza-esverdeados/escuros
     ctx.beginPath();
