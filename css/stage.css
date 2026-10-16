@@ -1,4 +1,5 @@
 .stage {
+  flex: 1;
   position: relative;
   min-height: 0;
   min-width: 0;
