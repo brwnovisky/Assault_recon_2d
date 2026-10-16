@@ -7,12 +7,14 @@ export function createUnit(x, y, hp, id) {
     target: null, react: 0, cd: 0, moving: false,
     path: [], acts: [], aims: [], pi: 0, holds: [],
     waiting: false, lock: 0, lockFrom: -1, lockTo: -1, planAt: Infinity,
-    alert: false, heard: null, seen: false, vis: false
+    alert: false, watch: null, seen: false, vis: false
   };
 }
 
+export const roomOf = u => state.roomId[(u.y | 0) * state.W + (u.x | 0)];
+
 export function faceDoor(u) {
-  const r = state.roomId[(u.y | 0) * state.W + (u.x | 0)];
+  const r = roomOf(u);
   let best = null, bd = 1e9;
   for (const d of state.doors) {
     const dd = (d.x + .5 - u.x) ** 2 + (d.y + .5 - u.y) ** 2 + (d.rooms.includes(r) ? 0 : 1e4);

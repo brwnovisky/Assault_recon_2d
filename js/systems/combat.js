@@ -1,6 +1,7 @@
 import { DT, TURN, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, NAMES, TRACER_LIFE } from "../config.js";
 import { state, say } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
+import { alertEnemy } from "../entities/enemy.js";
 
 function shoot(u, t, d) {
   const c = los(u.x, u.y, t.x, t.y);
@@ -20,10 +21,7 @@ function shoot(u, t, d) {
   for (const e of state.enemies) {
     if (!e.alive || e === u) continue;
     const dx = u.x - e.x, dy = u.y - e.y;
-    if (dx * dx + dy * dy < 64) {
-      e.alert = true;
-      if (!e.target) e.heard = Math.atan2(dy, dx);
-    }
+    if (!e.alert && dx * dx + dy * dy < 64) alertEnemy(e);
   }
 
   if (!hit) return;
@@ -37,20 +35,20 @@ function shoot(u, t, d) {
   state.uiDirty = true;
 }
 
-function fight(u, foes, half, range, omni, react) {
+function fight(u, foes, half, range, react) {
   let best = null, bd = range;
   for (const f of foes) {
     if (!f.alive) continue;
     const dx = f.x - u.x, dy = f.y - u.y, d = Math.hypot(dx, dy);
     if (d > bd) continue;
-    if (!omni && Math.abs(adiff(Math.atan2(dy, dx), u.a)) > half) continue;
+    if (Math.abs(adiff(Math.atan2(dy, dx), u.a)) > half) continue;
     if (los(u.x, u.y, f.x, f.y) < 0) continue;
     best = f; bd = d;
   }
   if (best !== u.target) { u.target = best; u.react = react; }
   u.cd -= DT;
   if (best) {
-    if (u.id < 0) u.alert = true;
+    if (u.id < 0 && !u.alert) alertEnemy(u);
     const ang = Math.atan2(best.y - u.y, best.x - u.x);
     u.want = ang;
     u.react -= DT;
@@ -61,10 +59,10 @@ function fight(u, foes, half, range, omni, react) {
 }
 
 export function resolveCombat() {
-  for (const o of state.ops) if (o.alive) fight(o, state.enemies, OP_HALF, OP_RANGE, false, 0.3);
+  for (const o of state.ops) if (o.alive) fight(o, state.enemies, OP_HALF, OP_RANGE, 0.3);
   for (const e of state.enemies) if (e.alive) {
-    e.want = e.heard != null ? e.heard : e.base;
-    fight(e, state.ops, EN_HALF, EN_RANGE, e.alert, e.alert ? 0.45 : 0.7);
+    e.want = e.watch != null ? e.watch : e.base;
+    fight(e, state.ops, EN_HALF, EN_RANGE, e.alert ? 0.45 : 0.7);
   }
 
   for (let i = state.tracers.length - 1; i >= 0; i--) {
