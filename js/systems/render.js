@@ -3,13 +3,17 @@ import { state } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
 import { endOf, activeAim } from "../entities/operator.js";
 
-let cv, ctx, bg, bgx, TS = 32, dpr = 1;
+let cv, ctx, bg, bgx, fx, fxg, ring, ringg, TS = 32, dpr = 1;
 
 export function initRenderer(canvasElement) {
   cv = canvasElement;
   ctx = cv.getContext("2d");
   bg = document.createElement("canvas");
   bgx = bg.getContext("2d");
+  fx = document.createElement("canvas");
+  fxg = fx.getContext("2d");
+  ring = document.createElement("canvas");
+  ringg = ring.getContext("2d");
 }
 
 export function clampView() {
@@ -179,10 +183,10 @@ function gunPoint(pose, x, y) {
   return [GUN_PIVOT + px * c - py * s, GUN_Y + px * s + py * c];
 }
 
-function applyGun(pose) {
-  ctx.translate(GUN_PIVOT, GUN_Y);
-  ctx.rotate(pose.ang);
-  ctx.translate(-GUN_PIVOT - pose.back, -GUN_Y);
+function applyGun(g, pose) {
+  g.translate(GUN_PIVOT, GUN_Y);
+  g.rotate(pose.ang);
+  g.translate(-GUN_PIVOT - pose.back, -GUN_Y);
 }
 
 // Ponta do cano em coordenadas do mapa
@@ -192,14 +196,14 @@ function muzzle(u, pose, len) {
 }
 
 // Braço do ombro (fixo) ao pulso (preso à arma); o cotovelo acompanha metade do movimento
-function drawArm(pose, w, sx, sy, ex, ey, wx, wy) {
+function drawArm(g, pose, w, sx, sy, ex, ey, wx, wy) {
   const [gx, gy] = gunPoint(pose, ex, ey), [hx, hy] = gunPoint(pose, wx, wy);
-  ctx.lineWidth = w;
-  ctx.beginPath();
-  ctx.moveTo(sx, sy);
-  ctx.lineTo((ex + gx) / 2, (ey + gy) / 2);
-  ctx.lineTo(hx, hy);
-  ctx.stroke();
+  g.lineWidth = w;
+  g.beginPath();
+  g.moveTo(sx, sy);
+  g.lineTo((ex + gx) / 2, (ey + gy) / 2);
+  g.lineTo(hx, hy);
+  g.stroke();
 }
 
 // Inimigos com Fuzil AK-47
@@ -224,8 +228,8 @@ function drawEnemy(e, pose) {
 
     // 2. Braços (Mangas volumosas, ligeiramente menos definidas que as dos operadores)
     ctx.strokeStyle = C.enemy;
-    drawArm(pose, 0.095, -0.02, -0.14, 0.12, -0.11, 0.22, GUN_Y - 0.01);
-    drawArm(pose, 0.10, -0.04, 0.14, 0.05, 0.15, 0.10, GUN_Y + 0.02);
+    drawArm(ctx, pose, 0.095, -0.02, -0.14, 0.12, -0.11, 0.22, GUN_Y - 0.01);
+    drawArm(ctx, pose, 0.10, -0.04, 0.14, 0.05, 0.15, 0.10, GUN_Y + 0.02);
 
     // 3. Tronco (Biotipo mais largo e menos atlético, simulando casacos mais grossos)
     ctx.fillStyle = C.enemy;
@@ -256,7 +260,7 @@ function drawEnemy(e, pose) {
 
     // 5. Fuzil AK-47 (Metal cinza-ferro mais claro, contrastando com a madeira)
     ctx.save();
-    applyGun(pose);
+    applyGun(ctx, pose);
     ctx.fillStyle = "rgba(6, 9, 12, 0.35)"; // Sombra
     ctx.fillRect(-0.03, GUN_Y - 0.01, 0.44, 0.03);
 
@@ -321,144 +325,163 @@ function drawEnemy(e, pose) {
 }
 
 // Operadores com Carabina M4, Supressor e Passadas
-function drawOperator(o, col, pose) {
-  ctx.save();
-  ctx.translate(o.x, o.y);
-  ctx.rotate(o.a);
+function drawOperator(g, o, col, pose, shadow) {
+  g.save();
+  g.translate(o.x, o.y);
+  g.rotate(o.a);
 
   const isMoving = (state.status === "exec" || state.status === "replay") && o.moving;
   const legCadence = isMoving ? state.simTime * 14 : 0;
   const stride = isMoving ? Math.sin(legCadence) * 0.14 : 0;
 
   // 0. Sombra suave no solo
-  ctx.fillStyle = "rgba(8, 12, 16, 0.40)";
-  ctx.beginPath();
-  ctx.ellipse(0.02, 0.02, 0.20, 0.23, 0, 0, 2 * Math.PI);
-  ctx.fill();
+  if (shadow) {
+    g.fillStyle = "rgba(8, 12, 16, 0.40)";
+    g.beginPath();
+    g.ellipse(0.02, 0.02, 0.20, 0.23, 0, 0, 2 * Math.PI);
+    g.fill();
+  }
 
   // 1. Botas tácticas (Passo dinâmico)
-  ctx.fillStyle = "#202832";
-  ctx.beginPath();
-  ctx.ellipse(-0.08 + stride, -0.13, 0.05, 0.028, 0.15, 0, 2 * Math.PI);
-  ctx.ellipse(-0.15 - stride, 0.08, 0.05, 0.028, -0.1, 0, 2 * Math.PI);
-  ctx.fill();
+  g.fillStyle = "#202832";
+  g.beginPath();
+  g.ellipse(-0.08 + stride, -0.13, 0.05, 0.028, 0.15, 0, 2 * Math.PI);
+  g.ellipse(-0.15 - stride, 0.08, 0.05, 0.028, -0.1, 0, 2 * Math.PI);
+  g.fill();
 
   // 2. Braços (Mangas da farda táctica - Combat Shirt escura)
-  ctx.strokeStyle = "#2C3642"; // Cor táctica uniforme (Cinza-azulado escuro)
-  drawArm(pose, 0.09, -0.01, -0.15, 0.12, -0.10, 0.22, GUN_Y - 0.01); // Braço esquerdo (Estendido a segurar o guarda-mão)
-  drawArm(pose, 0.095, -0.03, 0.15, 0.04, 0.17, 0.10, GUN_Y + 0.02); // Braço direito (Fletido, no gatilho)
+  g.strokeStyle = "#2C3642"; // Cor táctica uniforme (Cinza-azulado escuro)
+  drawArm(g, pose, 0.09, -0.01, -0.15, 0.12, -0.10, 0.22, GUN_Y - 0.01); // Braço esquerdo (Estendido a segurar o guarda-mão)
+  drawArm(g, pose, 0.095, -0.03, 0.15, 0.04, 0.17, 0.10, GUN_Y + 0.02); // Braço direito (Fletido, no gatilho)
 
   // 3. Tronco anatómico (Ombros largos e peito musculado com fardamento)
-  ctx.fillStyle = "#2C3642"; // Farda táctica
-  ctx.beginPath();
-  ctx.ellipse(-0.04, 0.01, 0.14, 0.21, 0.05, 0, 2 * Math.PI); // Massa central
-  ctx.ellipse(0.02, -0.08, 0.07, 0.10, -0.2, 0, 2 * Math.PI); // Peitoral esquerdo
-  ctx.ellipse(0.02, 0.08, 0.07, 0.10, 0.2, 0, 2 * Math.PI);  // Peitoral direito
-  ctx.fill();
+  g.fillStyle = "#2C3642"; // Farda táctica
+  g.beginPath();
+  g.ellipse(-0.04, 0.01, 0.14, 0.21, 0.05, 0, 2 * Math.PI); // Massa central
+  g.ellipse(0.02, -0.08, 0.07, 0.10, -0.2, 0, 2 * Math.PI); // Peitoral esquerdo
+  g.ellipse(0.02, 0.08, 0.07, 0.10, 0.2, 0, 2 * Math.PI);  // Peitoral direito
+  g.fill();
 
   // 4. Colete balístico táctico
-  ctx.fillStyle = "#202832";
-  ctx.beginPath();
-  ctx.roundRect(-0.09, -0.11, 0.15, 0.22, 0.04);
-  ctx.fill();
+  g.fillStyle = "#202832";
+  g.beginPath();
+  g.roundRect(-0.09, -0.11, 0.15, 0.22, 0.04);
+  g.fill();
 
-  ctx.fillStyle = "#354353"; // Alças
-  ctx.fillRect(-0.06, -0.14, 0.08, 0.036);
-  ctx.fillRect(-0.06, 0.104, 0.08, 0.036);
+  g.fillStyle = "#354353"; // Alças
+  g.fillRect(-0.06, -0.14, 0.08, 0.036);
+  g.fillRect(-0.06, 0.104, 0.08, 0.036);
 
-  ctx.fillStyle = "#1E2732"; // Bolsas MOLLE frontais
+  g.fillStyle = "#1E2732"; // Bolsas MOLLE frontais
   for (const py of [-0.06, -0.01, 0.04]) {
-    ctx.beginPath();
-    ctx.roundRect(-0.01, py, 0.045, 0.038, 0.01);
-    ctx.fill();
+    g.beginPath();
+    g.roundRect(-0.01, py, 0.045, 0.038, 0.01);
+    g.fill();
   }
 
   // 5. Carabina M4 (Tons cinza-chumbo "gunmetal", mais realista)
-  ctx.save();
-  applyGun(pose);
-  ctx.fillStyle = "rgba(6, 9, 12, 0.35)"; // Sombra da arma
-  ctx.fillRect(-0.03, GUN_Y - 0.01, 0.44, 0.03);
+  g.save();
+  applyGun(g, pose);
+  g.fillStyle = "rgba(6, 9, 12, 0.35)"; // Sombra da arma
+  g.fillRect(-0.03, GUN_Y - 0.01, 0.44, 0.03);
 
-  ctx.fillStyle = "#455263"; // Coronha
-  ctx.fillRect(-0.03, GUN_Y - 0.009, 0.08, 0.018);
-  ctx.fillStyle = "#2A3441"; // Soleira borracha
-  ctx.fillRect(-0.04, GUN_Y - 0.012, 0.012, 0.024);
+  g.fillStyle = "#455263"; // Coronha
+  g.fillRect(-0.03, GUN_Y - 0.009, 0.08, 0.018);
+  g.fillStyle = "#2A3441"; // Soleira borracha
+  g.fillRect(-0.04, GUN_Y - 0.012, 0.012, 0.024);
 
-  ctx.fillStyle = "#546478"; // Receiver (Caixa da culatra)
-  ctx.fillRect(0.05, GUN_Y - 0.011, 0.12, 0.022);
+  g.fillStyle = "#546478"; // Receiver (Caixa da culatra)
+  g.fillRect(0.05, GUN_Y - 0.011, 0.12, 0.022);
 
-  ctx.fillStyle = "#384554"; // Carregador STANAG
-  ctx.beginPath();
-  ctx.moveTo(0.09, GUN_Y - 0.011);
-  ctx.lineTo(0.12, GUN_Y - 0.011);
-  ctx.lineTo(0.135, GUN_Y - 0.036);
-  ctx.lineTo(0.105, GUN_Y - 0.036);
-  ctx.closePath();
-  ctx.fill();
+  g.fillStyle = "#384554"; // Carregador STANAG
+  g.beginPath();
+  g.moveTo(0.09, GUN_Y - 0.011);
+  g.lineTo(0.12, GUN_Y - 0.011);
+  g.lineTo(0.135, GUN_Y - 0.036);
+  g.lineTo(0.105, GUN_Y - 0.036);
+  g.closePath();
+  g.fill();
 
-  ctx.fillStyle = "#242F3A"; // Ótica Holográfica
-  ctx.fillRect(0.08, GUN_Y - 0.007, 0.045, 0.014);
-  ctx.fillStyle = "#38BDF8"; // Lente ótica
-  ctx.fillRect(0.115, GUN_Y - 0.005, 0.006, 0.010);
+  g.fillStyle = "#242F3A"; // Ótica Holográfica
+  g.fillRect(0.08, GUN_Y - 0.007, 0.045, 0.014);
+  g.fillStyle = "#38BDF8"; // Lente ótica
+  g.fillRect(0.115, GUN_Y - 0.005, 0.006, 0.010);
 
-  ctx.fillStyle = "#414E5E"; // Guarda-mão Picatinny
-  ctx.fillRect(0.17, GUN_Y - 0.010, 0.11, 0.020);
-  ctx.fillStyle = "#2D3744"; // Ranhuras
+  g.fillStyle = "#414E5E"; // Guarda-mão Picatinny
+  g.fillRect(0.17, GUN_Y - 0.010, 0.11, 0.020);
+  g.fillStyle = "#2D3744"; // Ranhuras
   for (const rx of [0.19, 0.22, 0.25]) {
-    ctx.fillRect(rx, GUN_Y - 0.010, 0.012, 0.020);
+    g.fillRect(rx, GUN_Y - 0.010, 0.012, 0.020);
   }
 
-  ctx.fillStyle = "#2A3441"; // Supressor cinza escuro
-  ctx.beginPath();
-  ctx.roundRect(0.28, GUN_Y - 0.009, 0.14, 0.018, 0.003);
-  ctx.fill();
+  g.fillStyle = "#2A3441"; // Supressor cinza escuro
+  g.beginPath();
+  g.roundRect(0.28, GUN_Y - 0.009, 0.14, 0.018, 0.003);
+  g.fill();
 
   // 6. Luvas tácticas
-  ctx.fillStyle = "#222A33";
-  ctx.beginPath();
-  ctx.ellipse(0.10, GUN_Y + 0.012, 0.020, 0.015, 0.4, 0, 2 * Math.PI); // Gatilho
-  ctx.ellipse(0.23, GUN_Y - 0.006, 0.022, 0.015, -0.3, 0, 2 * Math.PI); // Guarda-mão
-  ctx.fill();
-  ctx.restore();
+  g.fillStyle = "#222A33";
+  g.beginPath();
+  g.ellipse(0.10, GUN_Y + 0.012, 0.020, 0.015, 0.4, 0, 2 * Math.PI); // Gatilho
+  g.ellipse(0.23, GUN_Y - 0.006, 0.022, 0.015, -0.3, 0, 2 * Math.PI); // Guarda-mão
+  g.fill();
+  g.restore();
 
   // 7. Cabeça, Auriculares e Capacete
-  ctx.fillStyle = "#25313D"; // Gola
-  ctx.beginPath();
-  ctx.ellipse(-0.03, 0.015, 0.065, 0.055, 0, 0, 2 * Math.PI);
-  ctx.fill();
+  g.fillStyle = "#25313D"; // Gola
+  g.beginPath();
+  g.ellipse(-0.03, 0.015, 0.065, 0.055, 0, 0, 2 * Math.PI);
+  g.fill();
 
-  ctx.fillStyle = "#222A33"; // Capacete táctico escuro padrão
-  ctx.beginPath();
-  ctx.ellipse(-0.04, 0.020, 0.09, 0.085, 0, 0, 2 * Math.PI);
-  ctx.fill();
+  g.fillStyle = "#222A33"; // Capacete táctico escuro padrão
+  g.beginPath();
+  g.ellipse(-0.04, 0.020, 0.09, 0.085, 0, 0, 2 * Math.PI);
+  g.fill();
 
   // Marcador IFF (Identify Friend/Foe): Losango brilhante no topo do capacete identificando o operador
-  ctx.fillStyle = col;
-  ctx.shadowColor = col;
-  ctx.shadowBlur = 6;
-  ctx.beginPath();
-  ctx.moveTo(-0.01, 0.020);  // Frente
-  ctx.lineTo(-0.04, 0.040);  // Lado direito
-  ctx.lineTo(-0.07, 0.020);  // Trás
-  ctx.lineTo(-0.04, 0.000);  // Lado esquerdo
-  ctx.closePath();
-  ctx.fill();
-  ctx.shadowBlur = 0; // Resetar o blur
+  g.fillStyle = col;
+  g.shadowColor = col;
+  g.shadowBlur = 6;
+  g.beginPath();
+  g.moveTo(-0.01, 0.020);  // Frente
+  g.lineTo(-0.04, 0.040);  // Lado direito
+  g.lineTo(-0.07, 0.020);  // Trás
+  g.lineTo(-0.04, 0.000);  // Lado esquerdo
+  g.closePath();
+  g.fill();
+  g.shadowBlur = 0; // Resetar o blur
 
-  ctx.fillStyle = "#2C3845"; // Auriculares ComTac cinza-esverdeados/escuros
-  ctx.beginPath();
-  ctx.roundRect(-0.06, -0.075, 0.04, 0.020, 0.005);
-  ctx.roundRect(-0.06, 0.095, 0.04, 0.020, 0.005);
-  ctx.fill();
+  g.fillStyle = "#2C3845"; // Auriculares ComTac cinza-esverdeados/escuros
+  g.beginPath();
+  g.roundRect(-0.06, -0.075, 0.04, 0.020, 0.005);
+  g.roundRect(-0.06, 0.095, 0.04, 0.020, 0.005);
+  g.fill();
 
-  ctx.fillStyle = "#1E2732"; // Armação óculos
-  ctx.beginPath();
-  ctx.roundRect(0.005, -0.03, 0.028, 0.10, 0.006);
-  ctx.fill();
-  ctx.fillStyle = "#324B66"; // Lente reflexiva
-  ctx.fillRect(0.017, -0.02, 0.008, 0.08);
+  g.fillStyle = "#1E2732"; // Armação óculos
+  g.beginPath();
+  g.roundRect(0.005, -0.03, 0.028, 0.10, 0.006);
+  g.fill();
+  g.fillStyle = "#324B66"; // Lente reflexiva
+  g.fillRect(0.017, -0.02, 0.008, 0.08);
 
-  ctx.restore();
+  g.restore();
+}
+
+// Contorno do operador selecionado: a figura (sem sombra) dilatada em 8 direções, tingida e recortada pela própria figura
+const OUTLINE_BOX = 0.65, OUTLINE_W = 0.05;
+function drawOutline(o, col, pose) {
+  const s = dpr * TS * state.Z, n = Math.ceil(2 * OUTLINE_BOX * s), r = OUTLINE_W * s;
+  for (const c of [fx, ring]) { c.width = n; c.height = n; }
+  fxg.setTransform(s, 0, 0, s, (OUTLINE_BOX - o.x) * s, (OUTLINE_BOX - o.y) * s);
+  fxg.lineCap = fxg.lineJoin = "round";
+  drawOperator(fxg, o, col, pose, false);
+  for (let k = 0; k < 8; k++) ringg.drawImage(fx, Math.cos(k * Math.PI / 4) * r, Math.sin(k * Math.PI / 4) * r);
+  ringg.globalCompositeOperation = "source-in";
+  ringg.fillStyle = col;
+  ringg.fillRect(0, 0, n, n);
+  ringg.globalCompositeOperation = "destination-out";
+  ringg.drawImage(fx, 0, 0);
+  ctx.drawImage(ring, o.x - OUTLINE_BOX, o.y - OUTLINE_BOX, n / s, n / s);
 }
 
 export function draw() {
@@ -571,15 +594,13 @@ export function draw() {
     const col = C.op[i];
     if (!o.alive) { drawX(o.x, o.y, col, .6); return; }
 
-    if (i === state.sel && state.status === "plan") {
-      ctx.strokeStyle = col; ctx.lineWidth = .05; ctx.beginPath(); ctx.arc(o.x, o.y, .46, 0, 7); ctx.stroke();
-    }
-
     if (state.status === "exec" && o.blocked) {
       ctx.strokeStyle = C.enemy; ctx.lineWidth = .05; ctx.setLineDash([.08, .08]);
       ctx.beginPath(); ctx.arc(o.x, o.y, .45, 0, 7); ctx.stroke(); ctx.setLineDash([]);
     }
 
-    drawOperator(o, col, gunPose(o, shotOf(false, i)));
+    const pose = gunPose(o, shotOf(false, i));
+    drawOperator(ctx, o, col, pose, true);
+    if (i === state.sel && state.status === "plan") drawOutline(o, col, pose);
   });
 }
