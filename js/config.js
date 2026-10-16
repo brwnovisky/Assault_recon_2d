@@ -1,6 +1,8 @@
-export const CLASSIC_PARAMS = {
+const CLASSIC_PARAMS = {
   seed: "c5kp", w: 22, h: 15, rooms: 6, enemies: 7, crates: 8, extra: 3, corridors: 40, corrW: 2
 };
+
+export const CLASSIC_META = { name: "Clássico", source: "classic", params: CLASSIC_PARAMS };
 
 export const CLASSIC = [
   "###O##################",

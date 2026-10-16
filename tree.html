@@ -1,21 +1,27 @@
-ponto-de-entrada/
+Assault_recon_2d/
 ├── index.html # Estrutura base e importação de módulos
 ├── css/
 │ ├── theme.css # Variáveis de cor, temas claro/escuro e tipografia
-│ ├── layout.css # Grelha principal, cabeçalho e utilitários
-│ ├── stage.css # Canvas tático, relógio, controlos de zoom e ecrã de fim de jogo
+│ ├── layout.css # Coluna principal, cabeçalho e utilitários
+│ ├── stage.css # Canvas tático, barra de replay, relógio e ecrã de fim de jogo
 │ ├── hud.css # Painel do esquadrão, cartões de operadores e barra de ferramentas
 │ └── modals.css # Painéis deslizantes (gerador de mapas e instruções de ajuda)
 └── js/
-├── config.js # Constantes globais, paleta de cores e parâmetros padrão
-├── state.js # Gestão de estado, ciclo de turnos e persistência local
+├── config.js # Constantes globais, paleta de cores e mapa clássico
+├── state.js # Contêiner de estado, registo de eventos e portas
+├── storage.js # Persistência local (mapas, planos e partidas)
+├── world.js # Construção do mundo a partir do mapa (grelhas, salas, portas)
 ├── pathfinding.js # Algoritmos BFS e linhas de visão (LOS)
 ├── map-generator.js # Gerador procedural de mapas (BSP)
 ├── entities/
-│ ├── operator.js # Estado, inventário e rotas do esquadrão
-│ └── enemy.js # Visão, patrulha e comportamento dos adversários
+│ ├── unit.js # Base comum de operadores e inimigos
+│ ├── operator.js # Operadores, esperas e entradas do esquadrão
+│ └── enemy.js # Inimigos e visibilidade
 ├── systems/
+│ ├── planning.js # Comandos de planeamento (rotas, mira, esperas)
+│ ├── simulation.js # Passo da simulação do turno
+│ ├── movement.js # Movimento dos operadores e bloqueios
 │ ├── combat.js # Mecânicas de disparo, balística e cobertura
 │ ├── replay.js # Gravação, velocidade e reprodução de quadros
 │ └── render.js # Desenho do mapa, operadores, fuzis e iluminação
-└── app.js # Assault & Recon, ciclo de execução e eventos
+└── app.js # Ciclo de execução, interface e eventos

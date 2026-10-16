@@ -1,17 +1,10 @@
 import { NAMES } from "../config.js";
-import { state, say, saveMatch } from "../state.js";
-import { faceDoor, updateVis } from "./enemy.js";
+import { state, say } from "../state.js";
+import { saveMatch } from "../storage.js";
+import { createUnit, faceDoor } from "./unit.js";
+import { updateVis } from "./enemy.js";
 
-export function createOperator(x, y, id) {
-  return {
-    x: x + .5, y: y + .5, a: 0, want: 0, base: 0,
-    hp: 3, max: 3, alive: true, id,
-    target: null, react: 0, cd: 0, moving: false,
-    path: [], acts: [], aim: null, pi: 0, holds: [],
-    waiting: false, lock: 0, lockFrom: -1, lockTo: -1,
-    alert: false, heard: null, seen: false, vis: false
-  };
-}
+export const createOperator = (x, y, id) => createUnit(x, y, 3, id);
 
 export const tileIs = (p, x, y) => p && (p.x | 0) === x && (p.y | 0) === y;
 
@@ -61,7 +54,6 @@ export function redeploy(o, x, y) {
   for (const e of state.enemies) e.seen = false;
   updateVis();
   say(`${NAMES[o.id]} vai pela entrada ${slotIndex(x, y) + 1}.`);
-  state.uiDirty = true;
   saveMatch();
 }
 

@@ -1,4 +1,4 @@
-export function rng(s) {
+function rng(s) {
   let h = 1779033703 ^ s.length;
   for (let i = 0; i < s.length; i++) {
     h = Math.imul(h ^ s.charCodeAt(i), 3432918353);
@@ -339,7 +339,7 @@ export function generate(p) {
     const seen = new Uint8Array(gw * gh), st = [s0]; seen[s0] = 1; let n = 0;
     while (st.length) {
       const k = st.pop(); n++; const x = k % gw, y = (k / gw) | 0;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (const [dx, dy] of D4) {
         const nx = x + dx, ny = y + dy, c = g[ny][nx], nk = ny * gw + nx;
         if (c === "#" || c === "X" || seen[nk]) continue;
         seen[nk] = 1; st.push(nk);

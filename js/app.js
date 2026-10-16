@@ -1,83 +1,15 @@
-import { CLASSIC, CLASSIC_PARAMS, DIRS, DT, MOVE_TIME, MOVE_BUDGET, FREEZE_REAL, NAMES, C, readColors } from "./config.js";
-import { state, say, loadStore, persist, setMap, savePlan, saveMatch, restore } from "./state.js";
-import { bfs, pathLen } from "./pathfinding.js";
+import { CLASSIC, CLASSIC_META, DT, MOVE_TIME, MOVE_BUDGET, FREEZE_REAL, NAMES, C, readColors } from "./config.js";
+import { state, say } from "./state.js";
+import { emptyStore, loadStore, persist, setMap, savePlan, saveMatch, restore } from "./storage.js";
+import { buildWorld } from "./world.js";
+import { pathLen } from "./pathfinding.js";
 import { generate } from "./map-generator.js";
-import { createOperator, redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs } from "./entities/operator.js";
-import { createEnemy, faceDoor, updateVis } from "./entities/enemy.js";
-import { step } from "./systems/combat.js";
-import { setSpeed, recordReplay, applyReplayFrame, startReplay, endReplay } from "./systems/replay.js";
+import { step } from "./systems/simulation.js";
+import { select, setMode, undo, clearPlan, tapTile } from "./systems/planning.js";
+import { setSpeed, recordReplay, startReplay, stepReplay, toggleReplay, seekReplay, endReplay } from "./systems/replay.js";
 import { initRenderer, layout, zoomAt, clampView, drawStatic, draw } from "./systems/render.js";
 
 const $ = id => document.getElementById(id);
-
-function init() {
-  state.H = state.MAP.length;
-  state.W = state.MAP[0].length;
-  state.N = state.W * state.H;
-  state.solid = new Uint8Array(state.N);
-  state.opaque = new Uint8Array(state.N);
-  state.doorIdx = new Int16Array(state.N).fill(-1);
-  state.prev = new Int32Array(state.N);
-  state.queue = new Int32Array(state.N);
-  state.roomId = new Int16Array(state.N).fill(-1);
-  state.doors = [];
-  state.ops = [];
-  state.enemies = [];
-  state.tracers = [];
-  state.lines = [];
-  state.turn = 1;
-  state.sel = 0;
-  state.mode = "move";
-  state.status = "plan";
-  state.entries = [[], []];
-
-  for (let y = 0; y < state.H; y++) for (let x = 0; x < state.W; x++) {
-    const c = state.MAP[y][x], k = y * state.W + x;
-    if (c === "#" || c === "O") { state.solid[k] = 1; state.opaque[k] = 1; }
-    else if (c === "X") state.solid[k] = 2;
-    else if (c === "D") {
-      state.doorIdx[k] = state.doors.length;
-      state.doors.push({ x, y, open: false, vert: state.MAP[y - 1][x] === "#" });
-      state.opaque[k] = 1;
-    }
-    else if (c === "S") { state.ops.push(createOperator(x, y, state.ops.length)); state.entries[0].push({ x, y }); }
-    else if (c === "T") state.entries[1].push({ x, y });
-    else if (c === "E") state.enemies.push(createEnemy(x, y));
-  }
-
-  let rc = 0;
-  for (let k = 0; k < state.N; k++) {
-    if (state.solid[k] === 1 || state.doorIdx[k] >= 0 || state.roomId[k] >= 0) continue;
-    let h = 0, t = 0;
-    state.queue[t++] = k;
-    state.roomId[k] = rc;
-    while (h < t) {
-      const c = state.queue[h++], cx = c % state.W, cy = (c / state.W) | 0;
-      for (let i = 0; i < 4; i++) {
-        const nk = (cy + DIRS[i][1]) * state.W + cx + DIRS[i][0];
-        if (state.solid[nk] === 1 || state.doorIdx[nk] >= 0 || state.roomId[nk] >= 0) continue;
-        state.roomId[nk] = rc;
-        state.queue[t++] = nk;
-      }
-    }
-    rc++;
-  }
-
-  for (const d of state.doors) {
-    d.rooms = [];
-    for (let i = 0; i < 4; i++) {
-      const r = state.roomId[(d.y + DIRS[i][1]) * state.W + d.x + DIRS[i][0]];
-      if (r >= 0) d.rooms.push(r);
-    }
-  }
-
-  for (const u of state.ops.concat(state.enemies)) faceDoor(u);
-  $("over").hidden = true;
-  updateVis();
-  say("Planeje as rotas e execute.");
-  state.uiDirty = true;
-  req();
-}
 
 function freezeTurn(timeout) {
   state.status = "freeze";
@@ -88,7 +20,6 @@ function freezeTurn(timeout) {
     o.lockFrom = o.lockTo >= 0 ? o.cur : -1;
   }
   say(timeout ? `Tempo esgotado: congelado aos ${MOVE_TIME} s.` : `Turno resolvido em ${state.simTime.toFixed(1).replace(".", ",")} s.`);
-  state.uiDirty = true;
 }
 
 function toPlan() {
@@ -112,7 +43,6 @@ function finish(win) {
   state.status = "over";
   state.lastReplay = state.replayFrames.slice();
   $("overMsg").textContent = win ? `Área limpa em ${state.turn} ${state.turn > 1 ? "turnos" : "turno"}.` : "Esquadrão perdido.";
-  $("over").hidden = false;
   state.uiDirty = true;
   saveMatch();
 }
@@ -166,13 +96,7 @@ function frame(t) {
     if (!state.replayPaused) {
       acc += real * state.slowMo;
       while (acc >= DT && state.status === "replay") {
-        if (state.replayIdx < state.lastReplay.length - 1) {
-          state.replayIdx++;
-          applyReplayFrame(state.lastReplay[state.replayIdx]);
-        } else {
-          state.replayPaused = true;
-          $("replayToggle").textContent = "Reproduzir";
-        }
+        stepReplay();
         acc -= DT;
       }
       $("replaySlider").value = state.simTime;
@@ -208,12 +132,13 @@ function buildSquad() {
     b.className = "chip";
     b.dataset.i = i;
     b.innerHTML = `<span class="nm"><span class="sw"></span>${i + 1} ${NAMES[i]}</span><span class="row"><span class="pips">${"<i></i>".repeat(o.max)}</span><span class="mv"></span></span>`;
-    b.addEventListener("click", () => select(i));
+    b.addEventListener("click", () => { select(i); req(); });
     squad.appendChild(b);
   });
 }
 
 function ui() {
+  $("mapname").textContent = state.store.maps[state.mapId].name;
   $("turn").textContent = state.turn;
   $("foes").textContent = `${state.enemies.filter(e => !e.alive).length}/${state.enemies.length}`;
   $("log").textContent = state.lines.join("\n");
@@ -233,147 +158,31 @@ function ui() {
   });
   const o = state.ops[state.sel];
   $("undo").disabled = state.status !== "plan" || !o.acts.length;
-  $("clear").disabled = state.status !== "plan" || (!o.acts.length);
+  $("clear").disabled = state.status !== "plan" || !o.acts.length;
   $("go").disabled = state.status !== "plan";
-  const rb = $("replayBtn");
-  if (rb) {
-    rb.disabled = state.status !== "plan" || !state.lastReplay || !state.lastReplay.length;
-  }
-  if ($("replayBar")) $("replayBar").hidden = state.status !== "replay";
-}
-
-function select(i) {
-  if (state.status !== "plan" || !state.ops[i] || !state.ops[i].alive) return;
-  state.sel = i;
-  state.pendingHold = null;
-  state.uiDirty = true;
-  req();
-}
-
-function setMode(m) {
-  state.mode = m;
-  state.pendingHold = null;
-  state.uiDirty = true;
-  req();
-}
-
-function undo() {
-  const o = state.ops[state.sel], a = o.acts.pop();
-  if (a === undefined) return;
-  if (typeof a === "number") o.path.length -= a;
-  else if (a.hold) o.holds = o.holds.filter(x => x !== a.hold);
-  else o.aim = a.aim;
-  state.pendingHold = null;
-  pruneHolds();
-  state.uiDirty = true;
-  req();
-}
-
-function clearPlan() {
-  const o = state.ops[state.sel];
-  o.path = o.path.slice(0, o.lock);
-  o.acts = [];
-  o.aim = null;
-  o.holds = [];
-  state.pendingHold = null;
-  pruneHolds();
-  state.uiDirty = true;
-  req();
-}
-
-function waitTap(o, tx, ty) {
-  if (!state.pendingHold) {
-    let at = -1;
-    if (tileIs(o, tx, ty)) at = 0;
-    else {
-      const k = o.path.findIndex(p => tileIs(p, tx, ty));
-      if (k >= 0) at = k + 1;
-    }
-    if (at < 0) say(`Toque num ponto da rota de ${NAMES[o.id]} para marcar onde ele espera.`);
-    else if (at >= o.path.length) say(`${NAMES[o.id]} precisa ter rota depois do ponto de espera.`);
-    else {
-      state.pendingHold = { op: o.id, at };
-      say(`Agora toque no ponto da rota de outro operador que libera ${NAMES[o.id]}.`);
-    }
-    state.uiDirty = true;
-    req();
-    return;
-  }
-  const at = state.pendingHold.at;
-  state.pendingHold = null;
-  for (const y of state.ops) {
-    if (y === o || !y.alive) continue;
-    const j = y.path.findIndex(p => tileIs(p, tx, ty));
-    if (j < 0) continue;
-    if (dependsOn(y.id, o.id)) {
-      say(`${NAMES[y.id]} já espera por ${NAMES[o.id]}: os dois ficariam travados.`);
-      state.uiDirty = true;
-      req();
-      return;
-    }
-    const old = o.holds.find(h => h.at === at);
-    if (old) removeHold(o, old);
-    const hp = at === 0 ? o : o.path[at - 1];
-    const h = { at, op: y.id, ti: j + 1, hx: hp.x | 0, hy: hp.y | 0, tx, ty };
-    o.holds.push(h);
-    o.acts.push({ hold: h });
-    say(`${NAMES[o.id]} espera ${NAMES[y.id]} chegar ao ponto marcado.`);
-    state.uiDirty = true;
-    req();
-    return;
-  }
-  say("Esse ponto não está na rota de outro operador. Espera cancelada.");
-  state.uiDirty = true;
-  req();
+  $("replayBtn").disabled = state.status !== "plan" || !state.lastReplay || !state.lastReplay.length;
+  $("over").hidden = state.status !== "over";
+  $("replayBar").hidden = state.status !== "replay";
+  $("replayToggle").textContent = state.replayPaused ? "Reproduzir" : "Pausar";
+  if (state.status === "replay") $("replaySlider").max = state.lastReplay[state.lastReplay.length - 1].simTime;
+  $("spd05").setAttribute("aria-pressed", String(state.slowMo === 0.5));
+  $("spd025").setAttribute("aria-pressed", String(state.slowMo === 0.25));
+  $("clockSpeed").textContent = state.slowMo === 0.5 ? "½×" : "¼×";
 }
 
 function tapAt(e) {
-  if (state.status !== "plan") return;
-  const cv = $("cv");
-  const r = cv.getBoundingClientRect();
+  const r = $("cv").getBoundingClientRect();
   if (!r.width || !r.height) return;
   const tx = Math.floor(state.OX + ((e.clientX - r.left) / r.width) * (state.W / state.Z));
   const ty = Math.floor(state.OY + ((e.clientY - r.top) / r.height) * (state.H / state.Z));
-  if (tx < 0 || ty < 0 || tx >= state.W || ty >= state.H) return;
-  const hit = state.ops.findIndex(o => o.alive && (o.x | 0) === tx && (o.y | 0) === ty);
-  if (hit >= 0 && hit !== state.sel && state.mode === "move") { select(hit); return; }
-  if (state.turn === 1 && state.mode === "move" && hit < 0 && slotIndex(tx, ty) >= 0) {
-    redeploy(state.ops[state.sel], tx, ty);
-    return;
-  }
-  const o = state.ops[state.sel];
-  if (!o.alive) return;
-  if (state.mode === "wait") { waitTap(o, tx, ty); return; }
-  if (state.mode === "aim") {
-    o.acts.push({ aim: o.aim });
-    o.aim = { x: tx + .5, y: ty + .5 };
-  } else {
-    if (hit === state.sel) return;
-    const s = o.path.length ? o.path[o.path.length - 1] : o;
-    const full = bfs(s.x | 0, s.y | 0, tx, ty);
-    if (!full) {
-      say(state.solid[ty * state.W + tx] ? "Esse ponto está bloqueado." : "Sem caminho até ali.");
-      state.uiDirty = true;
-      req();
-      return;
-    }
-    let left = MOVE_BUDGET - pathLen(o), px = s.x, py = s.y, n = 0;
-    for (const q of full) {
-      const d = Math.hypot(q.x - px, q.y - py);
-      if (d > left + 1e-6) break;
-      left -= d; px = q.x; py = q.y; n++;
-    }
-    if (!n) { say(`${NAMES[o.id]} já usou todo o movimento do turno.`); state.uiDirty = true; req(); return; }
-    if (n < full.length) say(`Rota cortada no limite de movimento de ${NAMES[o.id]}.`);
-    o.path.push(...full.slice(0, n));
-    o.acts.push(n);
-  }
-  state.uiDirty = true;
+  tapTile(tx, ty);
   req();
 }
 
 function start(resume) {
-  init();
+  buildWorld();
+  say("Planeje as rotas e execute.");
+  req();
   state.Z = 1; state.OX = 0; state.OY = 0; state.pendingHold = null;
   const ok = !!resume && restore();
   if (!ok) delete state.store.plans[state.mapId];
@@ -436,10 +245,10 @@ function setupEvents() {
     zoomAt(state.Z * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top, req);
   }, { passive: false });
 
-  document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => { setMode(b.dataset.mode); req(); }));
 
-  $("undo").addEventListener("click", undo);
-  $("clear").addEventListener("click", clearPlan);
+  $("undo").addEventListener("click", () => { undo(); req(); });
+  $("clear").addEventListener("click", () => { clearPlan(); req(); });
   $("go").addEventListener("click", execute);
   $("reset").addEventListener("click", () => { state.lastReplay = null; start(false); });
   $("again").addEventListener("click", () => { state.lastReplay = null; start(false); });
@@ -448,30 +257,12 @@ function setupEvents() {
 
   // Controlos da linha do tempo do Replay
   $("replayClose").addEventListener("click", () => endReplay(req));
-  $("replayToggle").addEventListener("click", () => {
-    state.replayPaused = !state.replayPaused;
-    $("replayToggle").textContent = state.replayPaused ? "Reproduzir" : "Pausar";
-    if (!state.replayPaused && state.replayIdx >= state.lastReplay.length - 1) {
-      state.replayIdx = 0; // Se estava no fim e deu play, recomeça
-    }
-  });
-  $("replaySlider").addEventListener("input", e => {
-    state.replayPaused = true;
-    $("replayToggle").textContent = "Reproduzir";
-    const targetTime = parseFloat(e.target.value);
-    let bestIdx = 0, minDist = 1e9;
-    for (let i = 0; i < state.lastReplay.length; i++) {
-      const d = Math.abs(state.lastReplay[i].simTime - targetTime);
-      if (d < minDist) { minDist = d; bestIdx = i; }
-    }
-    state.replayIdx = bestIdx;
-    applyReplayFrame(state.lastReplay[state.replayIdx]);
-    req();
-  });
+  $("replayToggle").addEventListener("click", toggleReplay);
+  $("replaySlider").addEventListener("input", e => { seekReplay(parseFloat(e.target.value)); req(); });
 
-  $("spd05").addEventListener("click", () => setSpeed(0.5));
-  $("spd025").addEventListener("click", () => setSpeed(0.25));
-  $("clockSpeed").addEventListener("click", () => setSpeed(state.slowMo === 0.5 ? 0.25 : 0.5));
+  $("spd05").addEventListener("click", () => { setSpeed(0.5); req(); });
+  $("spd025").addEventListener("click", () => { setSpeed(0.25); req(); });
+  $("clockSpeed").addEventListener("click", () => { setSpeed(state.slowMo === 0.5 ? 0.25 : 0.5); req(); });
 
   addEventListener("keydown", e => {
     if (document.querySelector(".sheet:not([hidden])")) {
@@ -488,6 +279,7 @@ function setupEvents() {
     else if (k === "z") undo();
     else if (k === "r") state.status === "replay" ? endReplay(req) : startReplay(req);
     else if (k === "enter") execute();
+    req();
   });
 
   let rt = 0;
@@ -524,11 +316,21 @@ function setupEvents() {
     f();
   });
 
-  function applyParams(g) {
+  function fillParams(g) {
     PF.forEach(([id, k]) => {
       if (g[k] != null) { $(id).value = g[k]; $(id).dispatchEvent(new Event("input")); }
     });
     if (g.seed) $("pSeed").value = g.seed;
+  }
+
+  function readParams() {
+    const g = { seed: $("pSeed").value.trim() };
+    PF.forEach(([id, k]) => { g[k] = +$(id).value; });
+    return g;
+  }
+
+  function applyParams(g) {
+    fillParams(g);
     state.store.settings.gen = { ...g };
     persist();
   }
@@ -537,28 +339,25 @@ function setupEvents() {
   $("pSeed").value = newSeed();
 
   function genMap() {
-    let seed = $("pSeed").value.trim();
-    if (!seed) { seed = newSeed(); $("pSeed").value = seed; }
-    const p = { seed };
-    PF.forEach(([id, k]) => { p[k] = +$(id).value; });
+    if (!$("pSeed").value.trim()) $("pSeed").value = newSeed();
+    const p = readParams();
     const res = generate(p);
     state.store.settings.gen = p;
-    setMap(res.rows, { name: seed, source: "generated", params: p });
+    setMap(res.rows, { name: p.seed, source: "generated", params: p });
     if (start(true)) return;
     let m = `Mapa gerado com ${res.rooms} salas, ${res.corridors} ${res.corridors === 1 ? "corredor" : "corredores"} e ${res.enemies} inimigos.`;
     if (res.entries < 2) m += ` Este mapa tem só uma entrada.`;
     if (res.rooms < p.rooms) m += ` Nesse tamanho só couberam ${res.rooms} salas.`;
     else if (res.enemies < p.enemies) m += ` Não havia espaço para ${p.enemies}.`;
     say(m);
-    state.uiDirty = true;
     req();
   }
 
   $("genBtn").addEventListener("click", () => { genMap(); closeSheets(); });
   $("reroll").addEventListener("click", () => { $("pSeed").value = newSeed(); genMap(); closeSheets(); });
   $("classic").addEventListener("click", () => {
-    setMap(CLASSIC, { name: "Clássico", source: "classic", params: CLASSIC_PARAMS });
-    applyParams(CLASSIC_PARAMS);
+    setMap(CLASSIC, CLASSIC_META);
+    applyParams(CLASSIC_META.params);
     start(true);
     closeSheets();
   });
@@ -575,28 +374,20 @@ function setupEvents() {
     wipeArm = 0;
     b.textContent = "Apagar dados salvos";
     const meta = state.store.maps[state.mapId];
-    state.store = { version: 1, lastMapId: null, settings: { gen: null }, maps: {}, plans: {}, matches: {} };
-    setMap(state.MAP, meta ? { name: meta.name, source: meta.source, params: meta.params } : { name: "Clássico", source: "classic", params: CLASSIC_PARAMS });
+    state.store = emptyStore();
+    setMap(state.MAP, meta || CLASSIC_META);
     start(false);
     say("Dados salvos apagados.");
-    state.uiDirty = true;
     req();
     persist();
     closeSheets();
   });
 
   const gs = state.store.settings.gen;
-  if (gs) {
-    PF.forEach(([id, k]) => {
-      if (gs[k] != null) { $(id).value = gs[k]; $(id).dispatchEvent(new Event("input")); }
-    });
-    if (gs.seed) $("pSeed").value = gs.seed;
-  }
+  if (gs) fillParams(gs);
 
   document.querySelectorAll(".fields input").forEach(i => i.addEventListener("input", () => {
-    const g = { seed: $("pSeed").value.trim() };
-    PF.forEach(([id, k]) => { g[k] = +$(id).value; });
-    state.store.settings.gen = g;
+    state.store.settings.gen = readParams();
     persist();
   }));
 }
@@ -608,9 +399,9 @@ function setupEvents() {
 
   const last = state.store.lastMapId && state.store.maps[state.store.lastMapId];
   if (last && last.source !== "classic" && Array.isArray(last.rows) && last.rows.length) {
-    setMap(last.rows, { name: last.name, source: last.source, params: last.params });
+    setMap(last.rows, last);
   } else {
-    setMap(CLASSIC, { name: "Clássico", source: "classic", params: CLASSIC_PARAMS });
+    setMap(CLASSIC, CLASSIC_META);
   }
 
   setupEvents();
@@ -618,5 +409,5 @@ function setupEvents() {
 
   addEventListener("pagehide", persist);
   document.addEventListener("visibilitychange", () => { if (document.hidden) persist(); });
-  if (document.fonts) document.fonts.ready.then(() => { state.uiDirty = true; req(); });
+  document.fonts.ready.then(() => { state.uiDirty = true; req(); });
 })();
