@@ -35,6 +35,17 @@
       </div>
     </header>
 
+    <!-- Barra de Replay (Acima do mapa) -->
+    <div class="replay-bar" id="replayBar" hidden>
+      <button id="replayToggle">Pausar</button>
+      <input type="range" id="replaySlider" min="0" max="15" step="0.01" value="0">
+      <div class="seg" role="group">
+        <button id="spd05" aria-pressed="true">0.5×</button>
+        <button id="spd025" aria-pressed="false">0.25×</button>
+      </div>
+      <button id="replayClose">Sair</button>
+    </div>
+
     <!-- Área tática do mapa -->
     <div class="stage" id="stage">
       <canvas id="cv" aria-label="Mapa tático"></canvas>
@@ -42,10 +53,6 @@
         <span id="clockTxt"></span>
         <i><b id="clockBar"></b></i>
         <small id="clockSpeed" style="cursor:pointer" title="Clique para alternar a velocidade">½×</small>
-      </div>
-      <div class="zoom">
-        <button id="zin" aria-label="Aproximar">+</button>
-        <button id="zout" aria-label="Afastar">−</button>
       </div>
       <div class="over" id="over" hidden>
         <p id="overMsg"></p>
@@ -68,11 +75,6 @@
         <button id="undo">Desfazer</button>
         <button id="clear">Limpar</button>
         <button id="reset">Reiniciar</button>
-        <button id="replayBtn">Replay</button>
-        <div class="seg" role="group" aria-label="Velocidade">
-          <button id="spd05" aria-pressed="true" title="Velocidade 0.5x">0.5×</button>
-          <button id="spd025" aria-pressed="false" title="Velocidade 0.25x">0.25×</button>
-        </div>
         <button id="go" class="go">Executar</button>
       </div>
     </section>

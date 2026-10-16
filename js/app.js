@@ -163,16 +163,19 @@ function frame(t) {
     if (state.freezeT <= 0) { lastT = 0; toPlan(); }
   } else if (state.status === "replay") {
     lastT = t;
-    acc += real * state.slowMo;
-    while (acc >= DT && state.status === "replay") {
-      if (state.replayIdx < state.lastReplay.length - 1) {
-        state.replayIdx++;
-        applyReplayFrame(state.lastReplay[state.replayIdx]);
-      } else {
-        state.replayHoldEnd += DT;
-        if (state.replayHoldEnd >= 0.8) { endReplay(req); break; }
+    if (!state.replayPaused) {
+      acc += real * state.slowMo;
+      while (acc >= DT && state.status === "replay") {
+        if (state.replayIdx < state.lastReplay.length - 1) {
+          state.replayIdx++;
+          applyReplayFrame(state.lastReplay[state.replayIdx]);
+        } else {
+          state.replayPaused = true;
+          $("replayToggle").textContent = "Reproduzir";
+        }
+        acc -= DT;
       }
-      acc -= DT;
+      $("replaySlider").value = state.simTime;
     }
   } else {
     lastT = 0;
@@ -234,9 +237,9 @@ function ui() {
   $("go").disabled = state.status !== "plan";
   const rb = $("replayBtn");
   if (rb) {
-    rb.textContent = state.status === "replay" ? "Parar" : "Replay";
-    rb.disabled = state.status === "exec" || state.status === "freeze" || (!state.lastReplay && state.status !== "replay");
+    rb.disabled = state.status !== "plan" || !state.lastReplay || !state.lastReplay.length;
   }
+  if ($("replayBar")) $("replayBar").hidden = state.status !== "replay";
 }
 
 function select(i) {
@@ -433,8 +436,6 @@ function setupEvents() {
     zoomAt(state.Z * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top, req);
   }, { passive: false });
 
-  $("zin").addEventListener("click", () => zoomAt(state.Z * 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req));
-  $("zout").addEventListener("click", () => zoomAt(state.Z / 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req));
   document.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
 
   $("undo").addEventListener("click", undo);
@@ -443,7 +444,31 @@ function setupEvents() {
   $("reset").addEventListener("click", () => { state.lastReplay = null; start(false); });
   $("again").addEventListener("click", () => { state.lastReplay = null; start(false); });
 
-  $("replayBtn").addEventListener("click", () => state.status === "replay" ? endReplay(req) : startReplay(req));
+  $("replayBtn").addEventListener("click", () => startReplay(req));
+
+  // Controlos da linha do tempo do Replay
+  $("replayClose").addEventListener("click", () => endReplay(req));
+  $("replayToggle").addEventListener("click", () => {
+    state.replayPaused = !state.replayPaused;
+    $("replayToggle").textContent = state.replayPaused ? "Reproduzir" : "Pausar";
+    if (!state.replayPaused && state.replayIdx >= state.lastReplay.length - 1) {
+      state.replayIdx = 0; // Se estava no fim e deu play, recomeça
+    }
+  });
+  $("replaySlider").addEventListener("input", e => {
+    state.replayPaused = true;
+    $("replayToggle").textContent = "Reproduzir";
+    const targetTime = parseFloat(e.target.value);
+    let bestIdx = 0, minDist = 1e9;
+    for (let i = 0; i < state.lastReplay.length; i++) {
+      const d = Math.abs(state.lastReplay[i].simTime - targetTime);
+      if (d < minDist) { minDist = d; bestIdx = i; }
+    }
+    state.replayIdx = bestIdx;
+    applyReplayFrame(state.lastReplay[state.replayIdx]);
+    req();
+  });
+
   $("spd05").addEventListener("click", () => setSpeed(0.5));
   $("spd025").addEventListener("click", () => setSpeed(0.25));
   $("clockSpeed").addEventListener("click", () => setSpeed(state.slowMo === 0.5 ? 0.25 : 0.5));
@@ -460,8 +485,6 @@ function setupEvents() {
     else if (k === "m") setMode("move");
     else if (k === "a") setMode("aim");
     else if (k === "e") setMode("wait");
-    else if (k === "+" || k === "=") zoomAt(state.Z * 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req);
-    else if (k === "-") zoomAt(state.Z / 1.5, cv.clientWidth / 2, cv.clientHeight / 2, req);
     else if (k === "z") undo();
     else if (k === "r") state.status === "replay" ? endReplay(req) : startReplay(req);
     else if (k === "enter") execute();

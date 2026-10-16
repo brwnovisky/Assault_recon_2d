@@ -37,6 +37,7 @@ export const state = {
   replaySavedState: null,
   replayIdx: 0,
   replayHoldEnd: 0,
+  replayPaused: false,
   store: null
 };
 
@@ -52,7 +53,7 @@ export function loadStore() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (s && s.version === 1 && s.settings && s.maps && s.plans && s.matches) return s;
-  } catch (e) {}
+  } catch (e) { }
   return emptyStore();
 }
 
@@ -61,7 +62,7 @@ export function persist() {
   clearTimeout(saveT);
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(state.store));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 export function schedulePersist() {

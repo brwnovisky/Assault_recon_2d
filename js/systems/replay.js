@@ -58,6 +58,16 @@ export function startReplay(req) {
   state.status = "replay";
   state.replayIdx = 0;
   state.replayHoldEnd = 0;
+  state.replayPaused = false;
+
+  const slider = document.getElementById("replaySlider");
+  if (slider) {
+    slider.max = state.lastReplay[state.lastReplay.length - 1].simTime;
+    slider.value = 0;
+  }
+  const toggle = document.getElementById("replayToggle");
+  if (toggle) toggle.textContent = "Pausar";
+
   document.getElementById("over").hidden = true;
   applyReplayFrame(state.lastReplay[0]);
   say("Assistindo replay do turno...");

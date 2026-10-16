@@ -60,23 +60,31 @@ canvas {
   font-weight: 600;
 }
 
-.zoom {
-  position: absolute;
-  right: 6px;
-  top: 6px;
+.replay-bar {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 2;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
 }
 
-.zoom button {
-  width: 44px;
-  min-height: 44px;
-  padding: 0;
-  font-size: 24px;
-  line-height: 1;
-  opacity: .92;
+.replay-bar[hidden] {
+  display: none;
+}
+
+.replay-bar input[type=range] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--door);
+  cursor: pointer;
+}
+
+.replay-bar button {
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 15px;
 }
 
 .over {
@@ -101,5 +109,3 @@ canvas {
   text-align: center;
   padding: 0 16px;
 }
-
-
