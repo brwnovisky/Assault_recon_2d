@@ -35,13 +35,17 @@
       </div>
     </header>
 
-    <!-- Barra de Replay (Acima do mapa) -->
-    <div class="replay-bar">
-      <button id="replayBtn">Replay</button>
-      <button id="replayToggle">Pausar</button>
+    <!-- Barra superior: replay, tempo e ações do turno -->
+    <div class="topbar">
+      <div class="seg" role="group" aria-label="Replay">
+        <button id="replayBtn">Replay</button>
+        <button id="replayToggle">Pausar</button>
+        <button id="replaySpeed" title="Velocidade do replay">1×</button>
+        <button id="replayClose">Sair</button>
+      </div>
       <span class="time" id="timeTxt"></span>
-      <button id="replaySpeed" title="Velocidade do replay">1×</button>
-      <button id="replayClose">Sair</button>
+      <button id="reset">Reiniciar</button>
+      <button id="go" class="go">Executar</button>
     </div>
 
     <!-- Área tática do mapa -->
@@ -68,14 +72,12 @@
       <div class="squad" id="squad"></div>
       <div class="tools">
         <div class="seg" role="group" aria-label="Modo">
-          <button data-mode="move" aria-pressed="true">Mover</button>
+          <button data-mode="move" aria-pressed="false">Mover</button>
           <button data-mode="aim" aria-pressed="false">Mirar</button>
           <button data-mode="wait" aria-pressed="false">Esperar</button>
         </div>
         <button id="undo">Desfazer</button>
         <button id="clear">Limpar</button>
-        <button id="reset">Reiniciar</button>
-        <button id="go" class="go">Executar</button>
       </div>
     </section>
 

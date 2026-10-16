@@ -107,7 +107,7 @@ canvas {
   cursor: crosshair;
 }
 
-.replay-bar {
+.topbar {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -117,7 +117,7 @@ canvas {
   border: 1px solid var(--line);
 }
 
-.replay-bar .time {
+.topbar .time {
   flex: 1;
   min-width: 0;
   color: var(--muted);
@@ -126,7 +126,7 @@ canvas {
   white-space: nowrap;
 }
 
-.replay-bar button {
+.topbar button {
   min-height: 36px;
   padding: 4px 10px;
   font-size: 15px;
