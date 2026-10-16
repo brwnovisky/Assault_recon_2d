@@ -328,8 +328,8 @@ function tapAt(e) {
   if (state.status !== "plan") return;
   const cv = $("cv");
   const r = cv.getBoundingClientRect();
-  const tx = Math.floor(state.OX + (e.clientX - r.left) / (32 * state.Z));
-  const ty = Math.floor(state.OY + (e.clientY - r.top) / (32 * state.Z));
+  const tx = Math.floor(state.OX + ((e.clientX - r.left) / r.width) * (state.W / state.Z));
+  const ty = Math.floor(state.OY + ((e.clientY - r.top) / r.height) * (state.H / state.Z));
   if (tx < 0 || ty < 0 || tx >= state.W || ty >= state.H) return;
   const hit = state.ops.findIndex(o => o.alive && (o.x | 0) === tx && (o.y | 0) === ty);
   if (hit >= 0 && hit !== state.sel && state.mode === "move") { select(hit); return; }
@@ -407,8 +407,8 @@ function setupEvents() {
     } else if (!gesture.pinch) {
       if (Math.hypot(e.clientX - p.sx, e.clientY - p.sy) > 8) gesture.moved = true;
       if (gesture.moved && state.Z > 1) {
-        state.OX -= dx / (32 * state.Z);
-        state.OY -= dy / (32 * state.Z);
+        state.OX -= dx * (state.W / state.Z) / r.width;
+        state.OY -= dy * (state.H / state.Z) / r.height;
         clampView();
         req();
       }
