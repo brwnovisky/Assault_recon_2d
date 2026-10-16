@@ -71,10 +71,19 @@ export function blocker(o, k) {
   const nx = k % state.W, ny = (k / state.W) | 0;
   const diag = cx !== nx && cy !== ny;
   const k1 = cy * state.W + nx, k2 = ny * state.W + cx;
+  const tx = nx + 0.5, ty = ny + 0.5;
+
   for (const u of state.ops) {
     if (u === o || !u.alive) continue;
-    if (u.cur === k || u.res === k) return u;
+
+    // Impede a travessia na mesma diagonal em sentidos opostos
     if (diag && ((u.cur === k1 && u.res === k2) || (u.cur === k2 && u.res === k1))) return u;
+
+    if (u.cur === k || u.res === k) {
+      // Só bloqueia se o aliado estiver exatamente parado no centro do tile
+      const dx = u.x - tx, dy = u.y - ty;
+      if (dx * dx + dy * dy < 0.0001) return u;
+    }
   }
   return null;
 }
