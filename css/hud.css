@@ -37,6 +37,11 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+button.armed {
+  border-color: var(--enemy);
+  color: var(--enemy);
+}
+
 button:disabled {
   opacity: .45;
   cursor: default;

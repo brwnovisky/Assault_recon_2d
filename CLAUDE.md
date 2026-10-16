@@ -13,6 +13,7 @@
 - `state.mode` can be `null`. With no mode active, a map tap selects an operator; pressing the active mode's button or key turns it off.
 - Position conflicts are resolved by path-creation priority (`priority`/`byPriority` in `entities/operator.js`). An operator without its own route keeps its tile; otherwise the route created earlier (`planAt`, from `state.planSeq`) wins. `resolveEnds()` in `planning.js` keeps planned end tiles unique by trimming lower-priority routes. `moveOperators()` processes operators in priority order, and `blocker()` never lets two operators reserve the same tile.
 - The canvas uses a fractional tile size (`layout()` in `render.js`), so the map exactly fills the stage's limiting side, minus whatever else is in `.board` (the time bar and gap). The stage size must never depend on content that changes between states: `flex: 1`/`min-height: 0` for the stage, and fixed-height HUD rows (for example `.chip .mv` keeps `min-height` when empty).
+- Destructive buttons (Reiniciar, Apagar dados salvos) use `confirmClick()` in `app.js`: the first tap arms the button (`.armed`, new label) and a second tap within 3 s confirms.
 - Tracers store only the shot's end point (`tx`, `ty`, hit or miss) and the shooter (`en`, `i`). `render.js` draws them from the shooter's current muzzle, and `gunPose` aims the arms and weapon at the end point, with recoil decaying over `TRACER_LIFE`.
 
 ## Verifying changes

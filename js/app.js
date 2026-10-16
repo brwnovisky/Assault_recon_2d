@@ -268,7 +268,24 @@ function setupEvents() {
   $("undo").addEventListener("click", () => { undo(); req(); });
   $("clear").addEventListener("click", () => { clearPlan(); req(); });
   $("go").addEventListener("click", execute);
-  $("reset").addEventListener("click", () => { state.lastReplay = null; start(false); });
+  // Ação destrutiva: o primeiro toque arma o botão, o segundo (em até 3 s) confirma
+  function confirmClick(b, armedText, action) {
+    const label = b.textContent;
+    let arm = 0;
+    const disarm = () => { clearTimeout(arm); arm = 0; b.textContent = label; b.classList.remove("armed"); };
+    b.addEventListener("click", () => {
+      if (!arm) {
+        b.textContent = armedText;
+        b.classList.add("armed");
+        arm = setTimeout(disarm, 3000);
+        return;
+      }
+      disarm();
+      action();
+    });
+  }
+
+  confirmClick($("reset"), "Confirmar", () => { state.lastReplay = null; start(false); });
   $("again").addEventListener("click", () => { state.lastReplay = null; start(false); });
 
   $("replayBtn").addEventListener("click", () => startReplay(req));
@@ -377,17 +394,7 @@ function setupEvents() {
     closeSheets();
   });
 
-  let wipeArm = 0;
-  $("wipe").addEventListener("click", () => {
-    const b = $("wipe");
-    if (!wipeArm) {
-      b.textContent = "Toque de novo para apagar";
-      wipeArm = setTimeout(() => { wipeArm = 0; b.textContent = "Apagar dados salvos"; }, 3000);
-      return;
-    }
-    clearTimeout(wipeArm);
-    wipeArm = 0;
-    b.textContent = "Apagar dados salvos";
+  confirmClick($("wipe"), "Toque de novo para apagar", () => {
     const meta = state.store.maps[state.mapId];
     state.store = emptyStore();
     setMap(state.MAP, meta || CLASSIC_META);
