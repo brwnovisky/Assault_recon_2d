@@ -1,7 +1,7 @@
 import { DT, TURN, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, NAMES, TRACER_LIFE } from "../config.js";
 import { state, say } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
-import { alertEnemy } from "../entities/enemy.js";
+import { alertEnemy, updateWatch, watchAngle } from "../entities/enemy.js";
 
 function shoot(u, t, d) {
   const c = los(u.x, u.y, t.x, t.y);
@@ -61,7 +61,8 @@ function fight(u, foes, half, range, react) {
 export function resolveCombat() {
   for (const o of state.ops) if (o.alive) fight(o, state.enemies, OP_HALF, OP_RANGE, 0.3);
   for (const e of state.enemies) if (e.alive) {
-    e.want = e.watch != null ? e.watch : e.base;
+    updateWatch(e);
+    e.want = e.watchDoor >= 0 ? watchAngle(e) : e.base;
     fight(e, state.ops, EN_HALF, EN_RANGE, e.alert ? 0.45 : 0.7);
   }
 

@@ -1,17 +1,32 @@
-import { OP_RANGE, OP_HALF } from "../config.js";
+import { OP_RANGE, OP_HALF, DT, WATCH_SWITCH } from "../config.js";
 import { state } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
 import { createUnit, roomOf } from "./unit.js";
 
 export const createEnemy = (x, y) => createUnit(x, y, 2, -1);
 
-// Inimigo alertado passa a vigiar uma porta sorteada da própria sala
+// Sorteia a porta vigiada entre as da própria sala, trocando de porta quando houver outra
+function pickDoor(e) {
+  const r = roomOf(e), room = [];
+  state.doors.forEach((d, i) => { if (d.rooms.includes(r)) room.push(i); });
+  const others = room.filter(i => i !== e.watchDoor), pool = others.length ? others : room;
+  if (pool.length) e.watchDoor = pool[(Math.random() * pool.length) | 0];
+  e.watchLeft = WATCH_SWITCH;
+}
+
+// Inimigo alertado vigia uma porta sorteada da sala e troca de porta a cada WATCH_SWITCH s
 export function alertEnemy(e) {
   e.alert = true;
-  const r = roomOf(e), doors = state.doors.filter(d => d.rooms.includes(r));
-  if (!doors.length) return;
-  const d = doors[(Math.random() * doors.length) | 0];
-  e.watch = Math.atan2(d.y + .5 - e.y, d.x + .5 - e.x);
+  pickDoor(e);
+}
+
+export function updateWatch(e) {
+  if (e.alert && (e.watchLeft -= DT) < 1e-9) pickDoor(e);
+}
+
+export function watchAngle(e) {
+  const d = state.doors[e.watchDoor];
+  return Math.atan2(d.y + .5 - e.y, d.x + .5 - e.x);
 }
 
 export function updateVis() {

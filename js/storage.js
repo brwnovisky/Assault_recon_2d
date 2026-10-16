@@ -89,7 +89,7 @@ export function saveMatch() {
     })),
     enemies: state.enemies.map(e => ({
       x: r3(e.x), y: r3(e.y), angle: r3(e.a), baseAngle: r3(e.base), hp: e.hp,
-      alert: e.alert, watch: e.watch == null ? null : r3(e.watch), seen: e.seen
+      alert: e.alert, watchDoor: e.watchDoor, watchLeft: r3(e.watchLeft), seen: e.seen
     })),
     doorsOpen: state.doors.map(d => d.open),
     log: state.lines.slice()
@@ -101,7 +101,7 @@ export function saveMatch() {
 
 export function restore() {
   const m = state.store.matches[state.mapId];
-  if (!m || m.operators.length !== state.ops.length || m.enemies.length !== state.enemies.length || m.doorsOpen.length !== state.doors.length) return false;
+  if (!m || m.operators.length !== state.ops.length || m.enemies.length !== state.enemies.length || m.doorsOpen.length !== state.doors.length || !m.enemies.every(s => "watchDoor" in s)) return false;
   state.turn = m.turn;
   m.operators.forEach((s, i) => {
     const o = state.ops[i];
@@ -116,7 +116,7 @@ export function restore() {
   m.enemies.forEach((s, i) => {
     const e = state.enemies[i];
     e.x = s.x; e.y = s.y; e.a = e.want = s.angle; e.base = s.baseAngle;
-    e.hp = s.hp; e.alive = s.hp > 0; e.alert = s.alert; e.watch = s.watch; e.seen = s.seen;
+    e.hp = s.hp; e.alive = s.hp > 0; e.alert = s.alert; e.watchDoor = s.watchDoor; e.watchLeft = s.watchLeft; e.seen = s.seen;
   });
   m.doorsOpen.forEach((v, i) => setDoor(i, v));
   state.lines = m.log.slice(-2);
