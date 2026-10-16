@@ -1,21 +1,21 @@
 ponto-de-entrada/
-├── index.html                  # Estrutura base e importação de módulos
+├── index.html # Estrutura base e importação de módulos
 ├── css/
-│   ├── theme.css               # Variáveis de cor, temas claro/escuro e tipografia
-│   ├── layout.css              # Grelha principal, cabeçalho e utilitários
-│   ├── stage.css               # Canvas tático, relógio, controlos de zoom e ecrã de fim de jogo
-│   ├── hud.css                 # Painel do esquadrão, cartões de operadores e barra de ferramentas
-│   └── modals.css              # Painéis deslizantes (gerador de mapas e instruções de ajuda)
+│ ├── theme.css # Variáveis de cor, temas claro/escuro e tipografia
+│ ├── layout.css # Grelha principal, cabeçalho e utilitários
+│ ├── stage.css # Canvas tático, relógio, controlos de zoom e ecrã de fim de jogo
+│ ├── hud.css # Painel do esquadrão, cartões de operadores e barra de ferramentas
+│ └── modals.css # Painéis deslizantes (gerador de mapas e instruções de ajuda)
 └── js/
-    ├── config.js               # Constantes globais, paleta de cores e parâmetros padrão
-    ├── state.js                # Gestão de estado, ciclo de turnos e persistência local
-    ├── pathfinding.js          # Algoritmos BFS e linhas de visão (LOS)
-    ├── map-generator.js        # Gerador procedural de mapas (BSP)
-    ├── entities/
-    │   ├── operator.js         # Estado, inventário e rotas do esquadrão
-    │   └── enemy.js            # Visão, patrulha e comportamento dos adversários
-    ├── systems/
-    │   ├── combat.js           # Mecânicas de disparo, balística e cobertura
-    │   ├── replay.js           # Gravação, velocidade e reprodução de quadros
-    │   └── render.js           # Desenho do mapa, operadores, fuzis e iluminação
-    └── app.js                  # Ponto de entrada, ciclo de execução e eventos
+├── config.js # Constantes globais, paleta de cores e parâmetros padrão
+├── state.js # Gestão de estado, ciclo de turnos e persistência local
+├── pathfinding.js # Algoritmos BFS e linhas de visão (LOS)
+├── map-generator.js # Gerador procedural de mapas (BSP)
+├── entities/
+│ ├── operator.js # Estado, inventário e rotas do esquadrão
+│ └── enemy.js # Visão, patrulha e comportamento dos adversários
+├── systems/
+│ ├── combat.js # Mecânicas de disparo, balística e cobertura
+│ ├── replay.js # Gravação, velocidade e reprodução de quadros
+│ └── render.js # Desenho do mapa, operadores, fuzis e iluminação
+└── app.js # Assault & Recon, ciclo de execução e eventos

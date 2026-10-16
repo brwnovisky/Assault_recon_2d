@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Ponto de Entrada</title>
+  <title>Assault & Recon</title>
 
   <!-- Tipografia -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,11 +18,12 @@
   <link rel="stylesheet" href="css/hud.css">
   <link rel="stylesheet" href="css/modals.css">
 </head>
+
 <body>
   <main class="app">
     <!-- Cabeçalho e estatísticas -->
     <header class="top">
-      <h1>Ponto de Entrada</h1>
+      <h1>Assault & Recon</h1>
       <div class="hbtn">
         <button data-open="sheetGen">Mapas</button>
         <button data-open="sheetHelp">Ajuda</button>
@@ -84,15 +86,24 @@
         </div>
         <div class="sheet-body">
           <div class="fields">
-            <label><span>Largura <output id="pWo"></output></span><input type="range" id="pW" min="14" max="32" value="22"></label>
-            <label><span>Altura <output id="pHo"></output></span><input type="range" id="pH" min="10" max="22" value="15"></label>
-            <label><span>Salas <output id="pRo"></output></span><input type="range" id="pR" min="2" max="14" value="6"></label>
-            <label><span>Inimigos <output id="pEo"></output></span><input type="range" id="pE" min="1" max="20" value="7"></label>
-            <label><span>Caixas <output id="pCo"></output></span><input type="range" id="pC" min="0" max="20" value="8"></label>
-            <label><span>Portas extras <output id="pXo"></output></span><input type="range" id="pX" min="0" max="8" value="3"></label>
-            <label><span>Corredores <output id="pKo"></output></span><input type="range" id="pK" min="0" max="100" step="10" value="40"></label>
-            <label><span>Largura do corredor <output id="pKwo"></output></span><input type="range" id="pKw" min="2" max="3" value="2"></label>
-            <label><span>Semente</span><input type="text" id="pSeed" maxlength="16" autocomplete="off" spellcheck="false"></label>
+            <label><span>Largura <output id="pWo"></output></span><input type="range" id="pW" min="14" max="32"
+                value="22"></label>
+            <label><span>Altura <output id="pHo"></output></span><input type="range" id="pH" min="10" max="22"
+                value="15"></label>
+            <label><span>Salas <output id="pRo"></output></span><input type="range" id="pR" min="2" max="14"
+                value="6"></label>
+            <label><span>Inimigos <output id="pEo"></output></span><input type="range" id="pE" min="1" max="20"
+                value="7"></label>
+            <label><span>Caixas <output id="pCo"></output></span><input type="range" id="pC" min="0" max="20"
+                value="8"></label>
+            <label><span>Portas extras <output id="pXo"></output></span><input type="range" id="pX" min="0" max="8"
+                value="3"></label>
+            <label><span>Corredores <output id="pKo"></output></span><input type="range" id="pK" min="0" max="100"
+                step="10" value="40"></label>
+            <label><span>Largura do corredor <output id="pKwo"></output></span><input type="range" id="pKw" min="2"
+                max="3" value="2"></label>
+            <label><span>Semente</span><input type="text" id="pSeed" maxlength="16" autocomplete="off"
+                spellcheck="false"></label>
           </div>
           <div class="tools">
             <button id="genBtn">Gerar mapa</button>
@@ -112,14 +123,31 @@
           <button data-close>Fechar</button>
         </div>
         <div class="sheet-body">
-          <p>Toque num operador para selecioná-lo. No modo Mover, cada toque no mapa soma um trecho à rota. No modo Mirar, toque onde ele deve apontar quando parar. As casas destacadas mostram o que ele vai enxergar dali (as mais claras ficam atrás de caixas).</p>
-          <p>No turno 1 você escolhe por onde entrar: os quadrados tracejados são as vagas das entradas. Mapas com pelo menos 6 salas e corredores somados têm duas, nos cantos superior esquerdo e inferior direito. Os menores têm uma só, sorteada entre esses dois cantos. Com um operador selecionado, toque numa vaga livre para levá-lo até ela. A rota dele é apagada. A abertura na parede externa de cada entrada marca por onde o esquadrão chegou.</p>
-          <p>Planeje o esquadrão inteiro e toque em Executar: todos agem ao mesmo tempo. Inimigos só aparecem quando alguém os enxerga, e pegar um alvo de costas é a melhor jogada. Caixas dão cobertura parcial. Portas fechadas bloqueiam a visão até alguém entrar.</p>
-          <p>No gerador, a mesma semente com os mesmos parâmetros sempre gera o mesmo mapa, então dá para compartilhar uma fase só passando esses valores.</p>
-          <p>O progresso fica salvo neste navegador, separado por mapa: o plano do esquadrão e o estado da partida. Voltar a um mapa já jogado retoma de onde parou; Reiniciar partida começa do zero.</p>
-          <p>Cada operador anda até 48 casas por turno (diagonais contam como 1,4). O cartão mostra quanto da rota já foi usado, e um trecho que passa do limite é cortado no último ponto alcançável.</p>
-          <p>Esperar sincroniza a equipe: com um operador selecionado, toque num ponto da rota dele (ou nele mesmo) para marcar onde ele para. Depois toque num ponto da rota de outro operador: quando esse outro passar por ali, o primeiro segue. Se quem dá o sinal cair, a espera é liberada.</p>
-          <p>Operadores nunca ocupam a mesma casa. Quem encontrar a próxima casa ocupada fica parado (anel tracejado) até ela liberar. Cada turno dura no máximo 15 s de ação, mostrados no relógio do mapa, e a execução roda em câmera lenta (metade da velocidade). Aos 15 s tudo congela, até tiroteios. Tempo parado por bloqueio ou espera é tempo a menos andando. Quem congelar no meio de um passo termina esse passo no começo do turno seguinte.</p>
+          <p>Toque num operador para selecioná-lo. No modo Mover, cada toque no mapa soma um trecho à rota. No modo
+            Mirar, toque onde ele deve apontar quando parar. As casas destacadas mostram o que ele vai enxergar dali (as
+            mais claras ficam atrás de caixas).</p>
+          <p>No turno 1 você escolhe por onde entrar: os quadrados tracejados são as vagas das entradas. Mapas com pelo
+            menos 6 salas e corredores somados têm duas, nos cantos superior esquerdo e inferior direito. Os menores têm
+            uma só, sorteada entre esses dois cantos. Com um operador selecionado, toque numa vaga livre para levá-lo
+            até ela. A rota dele é apagada. A abertura na parede externa de cada entrada marca por onde o esquadrão
+            chegou.</p>
+          <p>Planeje o esquadrão inteiro e toque em Executar: todos agem ao mesmo tempo. Inimigos só aparecem quando
+            alguém os enxerga, e pegar um alvo de costas é a melhor jogada. Caixas dão cobertura parcial. Portas
+            fechadas bloqueiam a visão até alguém entrar.</p>
+          <p>No gerador, a mesma semente com os mesmos parâmetros sempre gera o mesmo mapa, então dá para compartilhar
+            uma fase só passando esses valores.</p>
+          <p>O progresso fica salvo neste navegador, separado por mapa: o plano do esquadrão e o estado da partida.
+            Voltar a um mapa já jogado retoma de onde parou; Reiniciar partida começa do zero.</p>
+          <p>Cada operador anda até 48 casas por turno (diagonais contam como 1,4). O cartão mostra quanto da rota já
+            foi usado, e um trecho que passa do limite é cortado no último ponto alcançável.</p>
+          <p>Esperar sincroniza a equipe: com um operador selecionado, toque num ponto da rota dele (ou nele mesmo) para
+            marcar onde ele para. Depois toque num ponto da rota de outro operador: quando esse outro passar por ali, o
+            primeiro segue. Se quem dá o sinal cair, a espera é liberada.</p>
+          <p>Operadores nunca ocupam a mesma casa. Quem encontrar a próxima casa ocupada fica parado (anel tracejado)
+            até ela liberar. Cada turno dura no máximo 15 s de ação, mostrados no relógio do mapa, e a execução roda em
+            câmera lenta (metade da velocidade). Aos 15 s tudo congela, até tiroteios. Tempo parado por bloqueio ou
+            espera é tempo a menos andando. Quem congelar no meio de um passo termina esse passo no começo do turno
+            seguinte.</p>
           <p>Zoom: botões + e −, pinça no celular ou roda do mouse. Com zoom, arraste o mapa para movê-lo.</p>
           <p>Atalhos: 1 a 4 seleciona, M move, A mira, E espera, Z desfaz, + e − zoom, Enter executa.</p>
         </div>
@@ -127,7 +155,8 @@
     </div>
   </main>
 
-  <!-- Ponto de entrada JavaScript (ES Module) -->
+  <!-- Assault & Recon JavaScript (ES Module) -->
   <script type="module" src="js/app.js"></script>
 </body>
+
 </html>
