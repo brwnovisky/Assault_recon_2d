@@ -1,7 +1,7 @@
 import { C, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, TRACER_LIFE } from "../config.js";
 import { state } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
-import { endOf } from "../entities/operator.js";
+import { endOf, activeAim } from "../entities/operator.js";
 
 let cv, ctx, bg, bgx, TS = 32, dpr = 1;
 
@@ -118,7 +118,9 @@ function cone(u, half, range, color, alpha) {
 function aimPreview(o, col) {
   const s = endOf(o);
   let a = o.a;
-  if (o.aim) a = Math.atan2(o.aim.y - s.y, o.aim.x - s.x);
+  // No fim da rota vale a última mira marcada
+  const aim = o.aims[o.aims.length - 1];
+  if (aim) a = Math.atan2(aim.y - s.y, aim.x - s.x);
   else if (o.path.length) {
     const q = o.path.length > 1 ? o.path[o.path.length - 2] : o;
     a = Math.atan2(s.y - q.y, s.x - q.x);
@@ -491,7 +493,7 @@ export function draw() {
 
   for (const e of state.enemies) if (e.alive && e.vis) cone(e, EN_HALF, EN_RANGE, C.enemy, 0.09);
 
-  const preview = state.status === "plan" && state.ops[state.sel].alive && (state.mode === "aim" || !!state.ops[state.sel].aim);
+  const preview = state.status === "plan" && state.ops[state.sel].alive && (state.mode === "aim" || state.ops[state.sel].aims.length > 0);
   state.ops.forEach((o, i) => {
     if (o.alive && (state.status === "exec" || state.status === "replay" || (i === state.sel && !preview))) {
       cone(o, OP_HALF, OP_RANGE, C.op[i], (state.status === "exec" || state.status === "replay") ? 0.1 : 0.15);
@@ -518,13 +520,16 @@ export function draw() {
         }
       }
     }
-    if (o.aim) {
-      const s = o.pi < o.path.length ? endOf(o) : o;
+    // Cada mira sai do ponto da rota onde passa a valer; a vigente sai do operador
+    const live = activeAim(o);
+    for (const m of o.aims) {
+      if (m.at <= o.pi && m !== live) continue;
+      const s = m.at <= o.pi ? o : o.path[m.at - 1];
       ctx.strokeStyle = col; ctx.lineWidth = 0.04; ctx.globalAlpha = .8 * fa;
-      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(o.aim.x, o.aim.y); ctx.stroke();
-      ctx.beginPath(); ctx.arc(o.aim.x, o.aim.y, .22, 0, 7);
-      ctx.moveTo(o.aim.x - .32, o.aim.y); ctx.lineTo(o.aim.x + .32, o.aim.y);
-      ctx.moveTo(o.aim.x, o.aim.y - .32); ctx.lineTo(o.aim.x, o.aim.y + .32);
+      ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(m.x, m.y); ctx.stroke();
+      ctx.beginPath(); ctx.arc(m.x, m.y, .22, 0, 7);
+      ctx.moveTo(m.x - .32, m.y); ctx.lineTo(m.x + .32, m.y);
+      ctx.moveTo(m.x, m.y - .32); ctx.lineTo(m.x, m.y + .32);
       ctx.stroke(); ctx.globalAlpha = 1;
     }
     ctx.globalAlpha = fa;

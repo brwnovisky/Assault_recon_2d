@@ -12,6 +12,13 @@ export const endOf = o => o.path.length ? o.path[o.path.length - 1] : o;
 const priority = o => o.path.length > o.lock ? o.planAt : -1;
 export const byPriority = (a, b) => (priority(a) - priority(b)) || (a.id - b.id);
 
+// Mira vigente: a última marcada num ponto da rota já alcançado (at = tamanho da rota quando foi marcada)
+export function activeAim(o) {
+  let aim = null;
+  for (const a of o.aims) if (a.at <= o.pi) aim = a;
+  return aim;
+}
+
 export const tileIs = (p, x, y) => p && (p.x | 0) === x && (p.y | 0) === y;
 
 export function dependsOn(a, b) {
@@ -53,7 +60,7 @@ export function redeploy(o, x, y) {
   o.y = y + .5;
   o.path = [];
   o.acts = [];
-  o.aim = null;
+  o.aims = [];
   o.holds = [];
   o.planAt = Infinity;
   faceDoor(o);

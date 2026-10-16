@@ -27,7 +27,7 @@ function toPlan() {
   state.turn++;
   state.tracers.length = 0;
   for (const o of state.ops) {
-    o.path = []; o.acts = []; o.pi = 0; o.aim = null; o.target = null;
+    o.path = []; o.acts = []; o.pi = 0; o.aims = []; o.target = null;
     o.holds = []; o.waiting = false; o.lock = 0; o.planAt = Infinity;
     if (o.alive && o.lockTo >= 0) {
       o.path = [{ x: (o.lockTo % state.W) + .5, y: ((o.lockTo / state.W) | 0) + .5 }];

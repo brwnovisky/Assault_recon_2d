@@ -67,8 +67,8 @@ export function savePlan() {
     mapId: state.mapId, turn: state.turn, selected: state.sel, mode: state.mode, updatedAt: Date.now(),
     operators: state.ops.map(o => ({
       path: o.path.map(tileOf),
-      aim: o.aim ? tileOf(o.aim) : null,
-      steps: o.acts.map(a => typeof a === "number" ? { type: "move", tiles: a } : a.hold ? { type: "hold", index: o.holds.indexOf(a.hold) } : { type: "aim", previous: a.aim ? tileOf(a.aim) : null }),
+      aims: o.aims.map(a => ({ at: a.at, tile: tileOf(a) })),
+      steps: o.acts.map(a => typeof a === "number" ? { type: "move", tiles: a } : a.hold ? { type: "hold", index: o.holds.indexOf(a.hold) } : { type: "aim", index: o.aims.indexOf(a.aim), replaced: a.replaced ? { at: a.replaced.at, tile: tileOf(a.replaced) } : null }),
       holds: o.holds.map(h => ({ at: h.at, operator: h.op, triggerIndex: h.ti, hold: [h.hx, h.hy], trigger: [h.tx, h.ty] })),
       order: Number.isFinite(o.planAt) ? o.planAt : null
     }))
@@ -123,16 +123,16 @@ export function restore() {
   if (m.status !== "active") return true;
 
   const p = state.store.plans[state.mapId];
-  if (p && p.turn === m.turn && p.operators.length === state.ops.length) {
+  if (p && p.turn === m.turn && p.operators.length === state.ops.length && p.operators.every(s => s.aims)) {
     p.operators.forEach((s, i) => {
       const o = state.ops[i];
       if (!o.alive) return;
       o.path = s.path.map(center);
-      o.aim = center(s.aim);
+      o.aims = s.aims.map(a => ({ at: a.at, ...center(a.tile) }));
       o.holds = (s.holds || []).map(h => ({ at: h.at, op: h.operator, ti: h.triggerIndex, hx: h.hold[0], hy: h.hold[1], tx: h.trigger[0], ty: h.trigger[1] }));
       o.planAt = s.order == null ? Infinity : s.order;
       state.planSeq = Math.max(state.planSeq, s.order || 0);
-      o.acts = s.steps.map(st => st.type === "move" ? st.tiles : st.type === "hold" ? { hold: o.holds[st.index] } : { aim: center(st.previous) }).filter(a => !(a && "hold" in a && !a.hold));
+      o.acts = s.steps.map(st => st.type === "move" ? st.tiles : st.type === "hold" ? { hold: o.holds[st.index] } : { aim: o.aims[st.index], replaced: st.replaced ? { at: st.replaced.at, ...center(st.replaced.tile) } : null }).filter(a => typeof a === "number" || !("hold" in a) || a.hold);
     });
     state.sel = p.selected;
     state.mode = p.mode === "aim" || p.mode === "move" ? p.mode : null;

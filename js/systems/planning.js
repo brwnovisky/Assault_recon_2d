@@ -5,6 +5,7 @@ import { redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs, endOf, 
 
 export function select(i) {
   if (state.status !== "plan" || !state.ops[i] || !state.ops[i].alive) return;
+  if (i !== state.sel) state.mode = null;
   state.sel = i;
   state.pendingHold = null;
   state.uiDirty = true;
@@ -21,7 +22,10 @@ export function undo() {
   if (a === undefined) return;
   if (typeof a === "number") o.path.length -= a;
   else if (a.hold) o.holds = o.holds.filter(x => x !== a.hold);
-  else o.aim = a.aim;
+  else {
+    o.aims = o.aims.filter(x => x !== a.aim);
+    if (a.replaced) o.aims.push(a.replaced);
+  }
   if (o.path.length === o.lock) o.planAt = Infinity;
   state.pendingHold = null;
   resolveEnds();
@@ -32,7 +36,7 @@ export function clearPlan() {
   const o = state.ops[state.sel];
   o.path = o.path.slice(0, o.lock);
   o.acts = [];
-  o.aim = null;
+  o.aims = [];
   o.holds = [];
   o.planAt = Infinity;
   state.pendingHold = null;
@@ -86,6 +90,7 @@ function trimEnd(o) {
     if (--o.acts[i] === 0) o.acts.splice(i, 1);
     break;
   }
+  for (const a of o.aims) a.at = Math.min(a.at, o.path.length);
   if (o.path.length === o.lock) o.planAt = Infinity;
 }
 
@@ -124,8 +129,11 @@ export function tapTile(tx, ty) {
   if (!o.alive) return;
   if (state.mode === "wait") { waitTap(o, tx, ty); return; }
   if (state.mode === "aim") {
-    o.acts.push({ aim: o.aim });
-    o.aim = { x: tx + .5, y: ty + .5 };
+    // A mira vale a partir do fim da rota atual e substitui outra marcada no mesmo ponto
+    const at = o.path.length, aim = { at, x: tx + .5, y: ty + .5 }, replaced = o.aims.find(a => a.at === at) || null;
+    o.aims = o.aims.filter(a => a !== replaced);
+    o.aims.push(aim);
+    o.acts.push({ aim, replaced });
   } else {
     if (hit === state.sel) return;
     const s = endOf(o);

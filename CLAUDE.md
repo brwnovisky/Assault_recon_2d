@@ -10,7 +10,9 @@
 - Execution always runs at 1.0x. `state.replaySpeed` (cycled through `REPLAY_SPEEDS`) affects only replay playback.
 - One timeline (`#timeline`) shows execution progress and seeks the replay. It sits on top of the map inside `.board`; `contain: inline-size` makes it as wide as the canvas. `timeline()` in `app.js` updates it every frame, and `ticks()` draws a mark every second with labels every 1/2/5/10 s depending on width. The top `.topbar` holds the replay group (`.seg`: Replay, Pausar, speed, Sair), the time label (`#timeTxt`) and the turn actions (Reiniciar, Executar).
 - Tick marks and the progress fill share the 14px thumb geometry: `calc(7px + (100% - 14px) * fraction)`.
-- `state.mode` can be `null`. With no mode active, a map tap selects an operator; pressing the active mode's button or key turns it off.
+- `state.mode` can be `null`. With no mode active, a map tap selects an operator; pressing the active mode's button or key turns it off. Switching to another operator (`select()`) also turns the mode off.
+- Aims are anchored to the route: `o.aims = [{ at, x, y }]`, where `at` is the route length when the aim was set. `activeAim(o)` (`entities/operator.js`) is the last aim with `at <= o.pi`. `moveOperators()` faces it every tick (moving, blocked or waiting), and `fight()` runs afterwards, so an engaged enemy takes priority. Trimming a route clamps `at`; an aim at the same point replaces the previous one (undo restores it through `{ aim, replaced }`).
+- A turn counts as done only when every route has finished and the operator has finished turning (`want` reached), so the final aim is actually held.
 - Position conflicts are resolved by path-creation priority (`priority`/`byPriority` in `entities/operator.js`). An operator without its own route keeps its tile; otherwise the route created earlier (`planAt`, from `state.planSeq`) wins. `resolveEnds()` in `planning.js` keeps planned end tiles unique by trimming lower-priority routes. `moveOperators()` processes operators in priority order, and `blocker()` never lets two operators reserve the same tile.
 - The canvas uses a fractional tile size (`layout()` in `render.js`), so the map exactly fills the stage's limiting side, minus whatever else is in `.board` (the time bar and gap). The stage size must never depend on content that changes between states: `flex: 1`/`min-height: 0` for the stage, and fixed-height HUD rows (for example `.chip .mv` keeps `min-height` when empty).
 - Destructive buttons (Reiniciar, Apagar dados salvos) use `confirmClick()` in `app.js`: the first tap arms the button (`.armed`, new label) and a second tap within 3 s confirms.
@@ -40,6 +42,15 @@
 - Root cause: `start()` calls `layout()` right after `buildSquad()`, while the chips' `.mv` text is still empty, which makes the panel 12.5px shorter. `ui()` restores the chips before ResizeObserver delivers, so the observer sees no size change and never relayouts.
 - Fix: `.chip .mv` has `min-height: 1.35em`, so panel height doesn't depend on state. `layout()` reads the stage size with `getBoundingClientRect()` to get exact fractional sizes.
 - Testing note: under `--virtual-time-budget`, headless Chrome holds back ResizeObserver callbacks and rAF. Check layout in real time through the DevTools protocol (a stdlib websocket client is enough).
+
+### Refresh crashed after planning any route
+- Symptom: plan a route, refresh, and the squad cards are empty and the game doesn't start. The console shows `TypeError: Cannot use 'in' operator to search for 'hold' in 7` in `storage.js` `restore()`.
+- Root cause: the restore filter did `"hold" in a` on move steps, which are plain numbers. The bug was already present before the refactor.
+- Fix: the filter only inspects object steps: `typeof a === "number" || !("hold" in a) || a.hold`.
+
+### Turn ended before the final aim was faced
+- Root cause: the turn resolved on the same tick the last route finished, before the operator had turned toward its aim.
+- Fix: `done` in `simulation.js` also requires `|adiff(want, a)| < 1e-6`.
 
 ### Turn-1 redeploy didn't request a redraw
 - Root cause: `redeploy()` marked the UI dirty, but `tapAt` returned without calling `req()`.

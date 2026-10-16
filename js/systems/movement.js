@@ -1,6 +1,6 @@
 import { DT, SPEED, MOVE_TIME, NAMES } from "../config.js";
 import { state, say, setDoor } from "../state.js";
-import { byPriority } from "../entities/operator.js";
+import { byPriority, activeAim } from "../entities/operator.js";
 
 function blocker(o, k) {
   const cx = o.cur % state.W, cy = (o.cur / state.W) | 0;
@@ -67,9 +67,9 @@ export function moveOperators() {
           o.x += dx / d * sp; o.y += dy / d * sp; sp = 0;
         }
       }
-      if (!o.moving && !o.blocked && o.aim) o.want = Math.atan2(o.aim.y - o.y, o.aim.x - o.x);
-    } else if (o.aim && !o.waiting) {
-      o.want = Math.atan2(o.aim.y - o.y, o.aim.x - o.x);
     }
+    // A mira vigente vale andando, bloqueado ou esperando; o combate (depois) tem prioridade
+    const aim = activeAim(o);
+    if (aim) o.want = Math.atan2(aim.y - o.y, aim.x - o.x);
   }
 }
