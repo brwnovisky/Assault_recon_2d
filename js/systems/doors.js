@@ -1,6 +1,5 @@
 import { DT, DOOR_SPEED, DIRS } from "../config.js";
 import { state } from "../state.js";
-import { opaqueAt, WALL_HALF } from "../pathfinding.js";
 
 // Dobradiça e lado de abertura sorteados de forma estável por mapa e posição (iguais ao recarregar)
 function doorHash(d) {
@@ -38,9 +37,10 @@ const roomier = (a, b) => !a || !b ? (a ? 1 : b ? -1 : 0) : (a.depth - b.depth) 
 
 // Folha fechada vai da dobradiça (hx, hy) na direção (ux, uy); abre girando para o lado (nx, ny).
 // Abre para o lado mais "sala" (nunca para dentro de um corredor); empate, lado sorteado.
-// A dobradiça fica na face da parede do lado da abertura, para a folha poder encostar na parede
+// A dobradiça fica logo à frente da face da parede do lado da abertura, para a folha poder
+// girar até encostar na parede vizinha
 export function initDoor(d, shapes) {
-  const h = doorHash(d), end = h & 1, f = WALL_HALF + .03;
+  const h = doorHash(d), end = h & 1, f = .55;
   const area = (dx, dy) => shapes[state.roomId[(d.y + dy) * state.W + d.x + dx]];
   const c = d.vert ? roomier(area(1, 0), area(-1, 0)) : roomier(area(0, 1), area(0, -1));
   const side = c ? Math.sign(c) : h & 2 ? 1 : -1;
@@ -61,8 +61,8 @@ function leafHits(d, swing) {
   const [lx, ly] = leafDir(d, swing);
   for (let t = .3; t <= 1.001; t += .1) {
     const px = d.hx + lx * t, py = d.hy + ly * t;
-    if (opaqueAt(px, py)) return true;
     const x = Math.floor(px), y = Math.floor(py);
+    if (x < 0 || y < 0 || x >= state.W || y >= state.H || state.opaque[y * state.W + x]) return true;
     if (state.solid[y * state.W + x] === 2 && px - x > .14 && px - x < .86 && py - y > .14 && py - y < .86) return true;
     for (const e of state.enemies) if (e.alive && (e.x - px) ** 2 + (e.y - py) ** 2 < .09) return true;
   }

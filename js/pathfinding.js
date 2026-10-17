@@ -8,36 +8,20 @@ export const adiff = (a, b) => {
   return d;
 };
 
-// Paredes ocupam só a faixa central da casa (1/3), ligada às paredes e portas vizinhas
-export const WALL_HALF = 1 / 6;
-export const linksWall = (x, y) => x >= 0 && y >= 0 && x < state.W && y < state.H && (state.solid[y * state.W + x] === 1 || state.doorIdx[y * state.W + x] >= 0);
-
-// Ponto (px, py) dentro de parede ou porta fechada
-export function opaqueAt(px, py) {
-  const x = Math.floor(px), y = Math.floor(py);
-  if (x < 0 || y < 0 || x >= state.W || y >= state.H) return true;
-  const k = y * state.W + x;
-  if (!state.opaque[k]) return false;
-  const fx = px - x - .5, fy = py - y - .5, inX = Math.abs(fx) <= WALL_HALF, inY = Math.abs(fy) <= WALL_HALF;
-  const di = state.doorIdx[k];
-  if (di >= 0) return state.doors[di].vert ? inX : inY;
-  if (inX && inY) return true;
-  if (inY && (fx < 0 ? linksWall(x - 1, y) : linksWall(x + 1, y))) return true;
-  return inX && (fy < 0 ? linksWall(x, y - 1) : linksWall(x, y + 1));
-}
-
 export function los(ax, ay, bx, by) {
-  const dx = bx - ax, dy = by - ay, n = Math.ceil(Math.hypot(dx, dy) * 10);
-  let cover = 0;
+  const dx = bx - ax, dy = by - ay, n = Math.ceil(Math.hypot(dx, dy) * 4);
+  let cover = 0, last = -1;
   for (let i = 1; i < n; i++) {
-    const t = i / n, px = ax + dx * t, py = ay + dy * t;
-    if (opaqueAt(px, py)) return -1;
-    if (state.solid[(py | 0) * state.W + (px | 0)] === 2) cover = 1;
+    const t = i / n, k = ((ay + dy * t) | 0) * state.W + ((ax + dx * t) | 0);
+    if (k === last) continue;
+    last = k;
+    if (state.opaque[k]) return -1;
+    if (state.solid[k] === 2) cover = 1;
   }
   return cover;
 }
 
-// Distância até a primeira parede no ângulo a (DDA na grade; dentro de casa opaca, testa a faixa da parede)
+// Distância até a primeira casa opaca no ângulo a (DDA na grade), limitada a max
 export function rayDist(x, y, a, max) {
   const dx = Math.cos(a), dy = Math.sin(a), sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
   const ix = Math.abs(1 / dx), iy = Math.abs(1 / dy);
@@ -48,10 +32,7 @@ export function rayDist(x, y, a, max) {
     let t;
     if (tx < ty) { t = tx; tx += ix; cx += sx; } else { t = ty; ty += iy; cy += sy; }
     if (t >= max) return max;
-    if (cx < 0 || cy < 0 || cx >= state.W || cy >= state.H) return t;
-    if (!state.opaque[cy * state.W + cx]) continue;
-    const out = Math.min(tx, ty, max);
-    for (let s = t; s < out; s += .04) if (opaqueAt(x + dx * s, y + dy * s)) return s;
+    if (cx < 0 || cy < 0 || cx >= state.W || cy >= state.H || state.opaque[cy * state.W + cx]) return t;
   }
 }
 

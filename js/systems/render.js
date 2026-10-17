@@ -1,6 +1,6 @@
 import { C, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, TRACER_LIFE } from "../config.js";
 import { state } from "../state.js";
-import { adiff, los, opaqueAt, linksWall, WALL_HALF } from "../pathfinding.js";
+import { adiff, los } from "../pathfinding.js";
 import { leafDir } from "./doors.js";
 import { endOf, activeAim } from "../entities/operator.js";
 
@@ -54,30 +54,18 @@ export function layout(req) {
 function drawExit(g, x, y) {
   const vert = x === 0 || x === state.W - 1, out = vert ? (x === 0 ? -1 : 1) : (y === 0 ? -1 : 1);
   g.fillStyle = C.wall;
-  const a = .5 - WALL_HALF, w = 2 * WALL_HALF;
   if (vert) {
-    g.fillRect(x + a, y - .01, w, .18);
-    g.fillRect(x + a, y + .83, w, .18);
+    g.fillRect(x - .01, y - .01, 1.02, .18);
+    g.fillRect(x - .01, y + .83, 1.02, .18);
   } else {
-    g.fillRect(x - .01, y + a, .18, w);
-    g.fillRect(x + .83, y + a, .18, w);
+    g.fillRect(x - .01, y - .01, .18, 1.02);
+    g.fillRect(x + .83, y - .01, .18, 1.02);
   }
   g.fillStyle = C.door;
   g.globalAlpha = .6;
   if (vert) g.fillRect(out < 0 ? x : x + .84, y + .18, .16, .65);
   else g.fillRect(x + .18, out < 0 ? y : y + .84, .65, .16);
   g.globalAlpha = 1;
-}
-
-// Parede fina: quadrado central de 1/3 da casa e braços até as paredes e portas vizinhas
-function drawWall(g, x, y) {
-  const a = .5 - WALL_HALF, b = .5 + WALL_HALF, w = 2 * WALL_HALF, e = .01;
-  g.fillStyle = C.wall;
-  g.fillRect(x + a, y + a, w, w);
-  if (linksWall(x - 1, y)) g.fillRect(x - e, y + a, a + e, w);
-  if (linksWall(x + 1, y)) g.fillRect(x + b, y + a, a + e, w);
-  if (linksWall(x, y - 1)) g.fillRect(x + a, y - e, w, a + e);
-  if (linksWall(x, y + 1)) g.fillRect(x + a, y + b, w, a + e);
 }
 
 export function drawStatic() {
@@ -98,7 +86,7 @@ function paintStatic(g) {
     const s = state.solid[y * state.W + x];
     if (s === 1) {
       if (state.MAP[y][x] === "O") drawExit(g, x, y);
-      else drawWall(g, x, y);
+      else { g.fillStyle = C.wall; g.fillRect(x - .01, y - .01, 1.02, 1.02); }
     } else if (s === 2) {
       g.fillStyle = C.crate;
       g.fillRect(x + .14, y + .14, .72, .72);
@@ -120,8 +108,8 @@ function cone(u, half, range, color, alpha) {
     const a = u.a - half + 2 * half * i / R, cx = Math.cos(a), sy = Math.sin(a);
     let d = 0.3;
     while (d < range) {
-      if (opaqueAt(u.x + cx * d, u.y + sy * d)) break;
-      d += 0.08;
+      if (state.opaque[((u.y + sy * d) | 0) * state.W + ((u.x + cx * d) | 0)]) break;
+      d += 0.15;
     }
     ctx.lineTo(u.x + cx * d, u.y + sy * d);
   }
@@ -587,7 +575,6 @@ export function draw() {
     ctx.globalAlpha = 1;
   });
 
-  // Esperas por cima de todas as rotas, para o relógio não ficar coberto
   // Abrir porta: chave na casa da rota onde o operador abre, puxada para o lado da porta
   const keyMark = (q, col) => {
     const d = state.doors[q.door], ax = q.tx + .5, ay = q.ty + .5;
@@ -603,6 +590,7 @@ export function draw() {
     ctx.stroke();
   };
 
+  // Esperas e aberturas por cima de todas as rotas, para os ícones não ficarem cobertos
   state.ops.forEach((o, i) => {
     if (!o.alive || state.status === "replay") return;
     const col = C.op[i];
