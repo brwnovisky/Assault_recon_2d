@@ -37,7 +37,7 @@ export function moveOperators() {
         o.waiting = true;
       }
     }
-    // Abrir porta neste ponto da rota: abre e espera a porta terminar de girar
+    // Abrir porta neste ponto da rota: abre e espera a porta terminar de correr
     const q = !o.waiting && o.opens.find(q => !q.done && q.at === o.pi);
     if (q) {
       const d = state.doors[q.door];
@@ -70,7 +70,7 @@ export function moveOperators() {
             setDoor(di, true);
             say(`${NAMES[o.id]} abriu a porta.`);
           }
-          // Só atravessa depois que a porta terminou de girar
+          // Só atravessa depois que a porta terminou de correr
           if (doorBusy(state.doors[di])) { o.waiting = true; o.want = Math.atan2(dy, dx); break; }
         }
         o.moving = true;

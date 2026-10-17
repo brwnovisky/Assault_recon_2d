@@ -1,7 +1,6 @@
 import { C, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, TRACER_LIFE } from "../config.js";
 import { state } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
-import { leafDir } from "./doors.js";
 import { endOf, activeAim } from "../entities/operator.js";
 
 let cv, ctx, bg, bgx, fx, fxg, ring, ringg, TS = 32, dpr = 1;
@@ -498,13 +497,13 @@ export function draw() {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // Porta: folha presa na dobradiça, girada pela abertura atual
+  // Porta de correr com 1/3 da casa de espessura: recolhe na parede até sobrar só a ponta
   for (const d of state.doors) {
-    const [lx, ly] = leafDir(d, d.swing);
-    ctx.strokeStyle = C.door; ctx.lineWidth = .14; ctx.lineCap = "butt";
-    ctx.beginPath(); ctx.moveTo(d.hx, d.hy); ctx.lineTo(d.hx + lx * .97, d.hy + ly * .97); ctx.stroke();
-    ctx.lineCap = "round";
-    ctx.fillStyle = C.wall; ctx.beginPath(); ctx.arc(d.hx, d.hy, .09, 0, 7); ctx.fill();
+    const len = 1 - d.slide * .86, w = 1 / 3, o = (1 - w) / 2;
+    ctx.fillStyle = C.door;
+    ctx.globalAlpha = d.slide >= 1 ? .55 : 1;
+    d.vert ? ctx.fillRect(d.x + o, d.y, w, len) : ctx.fillRect(d.x, d.y + o, len, w);
+    ctx.globalAlpha = 1;
   }
 
   if (state.status === "plan" && state.turn === 1) {
@@ -575,11 +574,9 @@ export function draw() {
     ctx.globalAlpha = 1;
   });
 
-  // Abrir porta: chave na casa da rota onde o operador abre, puxada para o lado da porta
+  // Abrir porta: chave sobre a porta que o operador vai abrir
   const keyMark = (q, col) => {
-    const d = state.doors[q.door], ax = q.tx + .5, ay = q.ty + .5;
-    const dx = d.x + .5 - ax, dy = d.y + .5 - ay, n = Math.hypot(dx, dy) || 1;
-    const kx = ax + dx / n * .3, ky = ay + dy / n * .3;
+    const d = state.doors[q.door], kx = d.x + .5, ky = d.y + .5;
     ctx.fillStyle = C.board; ctx.strokeStyle = col; ctx.lineWidth = .05;
     ctx.beginPath(); ctx.arc(kx, ky, .22, 0, 7); ctx.fill(); ctx.stroke();
     ctx.lineWidth = .045;

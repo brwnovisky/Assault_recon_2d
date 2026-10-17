@@ -1,6 +1,5 @@
 import { STORE_KEY, MAX_MAPS } from "./config.js";
 import { state, say, setDoor } from "./state.js";
-import { settleDoor } from "./systems/doors.js";
 
 export const emptyStore = () => ({ version: 1, lastMapId: null, settings: { gen: null }, maps: {}, plans: {}, matches: {} });
 
@@ -95,7 +94,6 @@ export function saveMatch() {
       attackers: e.attackers, threatLeft: r3(e.threatLeft)
     })),
     doorsOpen: state.doors.map(d => d.open),
-    doorSwing: state.doors.map(d => r3(d.swing)),
     log: state.lines.slice()
   };
   if (over) delete state.store.plans[state.mapId];
@@ -123,12 +121,8 @@ export function restore() {
     e.hp = s.hp; e.alive = s.hp > 0; e.alert = s.alert; e.watchDoor = s.watchDoor; e.watchLeft = s.watchLeft; e.seen = s.seen;
     e.attackers = s.attackers || 0; e.threatLeft = s.threatLeft || 0;
   });
-  m.doorsOpen.forEach((v, i) => {
-    const d = state.doors[i];
-    setDoor(i, v);
-    if (!v) return;
-    if (m.doorSwing) { d.swing = m.doorSwing[i]; d.settled = true; } else settleDoor(d);
-  });
+  // Partidas são salvas entre turnos: porta aberta já terminou de correr
+  m.doorsOpen.forEach((v, i) => { setDoor(i, v); state.doors[i].slide = v ? 1 : 0; });
   state.lines = m.log.slice(-2);
   if (m.status !== "active") return true;
 

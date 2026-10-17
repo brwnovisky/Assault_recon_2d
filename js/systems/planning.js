@@ -70,7 +70,7 @@ function waitTap(o, tx, ty) {
 }
 
 // Abrir porta: vale no fim da rota atual (ou na casa de partida), que precisa estar ao lado da porta.
-// Os movimentos traçados depois só começam quando a porta termina de girar
+// Os movimentos traçados depois só começam quando a porta termina de abrir
 function openTap(o, tx, ty) {
   const di = state.doorIdx[ty * state.W + tx];
   if (di < 0) { say("Toque numa porta para abri-la."); return; }
@@ -83,7 +83,7 @@ function openTap(o, tx, ty) {
   const q = { at, door: di, tx: px, ty: py };
   o.opens.push(q);
   o.acts.push({ open: q });
-  say(`${NAMES[o.id]} abre a porta e espera ela girar.`);
+  say(`${NAMES[o.id]} abre a porta e espera ela abrir por completo.`);
 }
 
 const tileKey = p => (p.y | 0) * state.W + (p.x | 0);

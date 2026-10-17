@@ -48,7 +48,7 @@ export function say(m) {
 
 export function setDoor(i, open) {
   const d = state.doors[i];
-  if (!open) { d.swing = 0; d.settled = false; }
+  if (!open) d.slide = 0;
   d.open = open;
   state.opaque[d.y * state.W + d.x] = open ? 0 : 1;
 }
