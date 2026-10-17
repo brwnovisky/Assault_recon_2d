@@ -5,7 +5,7 @@ import { updateVis } from "../entities/enemy.js";
 const FRAME_OPS = ["x", "y", "a", "hp", "alive", "moving", "blocked"];
 const FRAME_ENEMIES = ["x", "y", "a", "hp", "alive", "vis", "seen"];
 const SAVED_OPS = [...FRAME_OPS, "want", "blockedBy"];
-const SAVED_ENEMIES = [...FRAME_ENEMIES, "want", "base", "alert", "watchDoor", "watchLeft"];
+const SAVED_ENEMIES = [...FRAME_ENEMIES, "want", "base", "alert", "watchDoor", "watchLeft", "attackers", "threatLeft"];
 
 const pick = (u, keys) => Object.fromEntries(keys.map(k => [k, u[k]]));
 

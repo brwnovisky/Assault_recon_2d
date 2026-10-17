@@ -89,7 +89,8 @@ export function saveMatch() {
     })),
     enemies: state.enemies.map(e => ({
       x: r3(e.x), y: r3(e.y), angle: r3(e.a), baseAngle: r3(e.base), hp: e.hp,
-      alert: e.alert, watchDoor: e.watchDoor, watchLeft: r3(e.watchLeft), seen: e.seen
+      alert: e.alert, watchDoor: e.watchDoor, watchLeft: r3(e.watchLeft), seen: e.seen,
+      attackers: e.attackers, threatLeft: r3(e.threatLeft)
     })),
     doorsOpen: state.doors.map(d => d.open),
     log: state.lines.slice()
@@ -117,6 +118,7 @@ export function restore() {
     const e = state.enemies[i];
     e.x = s.x; e.y = s.y; e.a = e.want = s.angle; e.base = s.baseAngle;
     e.hp = s.hp; e.alive = s.hp > 0; e.alert = s.alert; e.watchDoor = s.watchDoor; e.watchLeft = s.watchLeft; e.seen = s.seen;
+    e.attackers = s.attackers || 0; e.threatLeft = s.threatLeft || 0;
   });
   m.doorsOpen.forEach((v, i) => setDoor(i, v));
   state.lines = m.log.slice(-2);

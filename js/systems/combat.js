@@ -1,7 +1,7 @@
 import { DT, TURN, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, NAMES, TRACER_LIFE } from "../config.js";
 import { state, say } from "../state.js";
 import { adiff, los } from "../pathfinding.js";
-import { alertEnemy, updateWatch, watchAngle } from "../entities/enemy.js";
+import { alertEnemy, updateWatch, watchAngle, takeFire, attackersOf } from "../entities/enemy.js";
 
 function shoot(u, t, d) {
   const c = los(u.x, u.y, t.x, t.y);
@@ -23,6 +23,8 @@ function shoot(u, t, d) {
     const dx = u.x - e.x, dy = u.y - e.y;
     if (!e.alert && dx * dx + dy * dy < 64) alertEnemy(e);
   }
+
+  if (u.id >= 0 && t.alive) takeFire(t, u);
 
   if (!hit) return;
   t.hp--;
@@ -62,8 +64,10 @@ export function resolveCombat() {
   for (const o of state.ops) if (o.alive) fight(o, state.enemies, OP_HALF, OP_RANGE, 0.3);
   for (const e of state.enemies) if (e.alive) {
     updateWatch(e);
-    e.want = e.watchDoor >= 0 ? watchAngle(e) : e.base;
-    fight(e, state.ops, EN_HALF, EN_RANGE, e.alert ? 0.45 : 0.7);
+    // Sob fogo, o inimigo vira para o atacante mais próximo e só engaja atacantes
+    const atk = attackersOf(e);
+    e.want = atk.length ? Math.atan2(atk[0].y - e.y, atk[0].x - e.x) : e.watchDoor >= 0 ? watchAngle(e) : e.base;
+    fight(e, atk.length ? atk : state.ops, EN_HALF, EN_RANGE, e.alert ? 0.45 : 0.7);
   }
 
   for (let i = state.tracers.length - 1; i >= 0; i--) {
