@@ -525,6 +525,22 @@ export function draw() {
 
   if (preview) aimPreview(state.ops[state.sel], C.op[state.sel]);
 
+  // Espera: traço atravessando a rota onde o operador retoma o movimento e um relógio ao lado
+  const holdMark = (o, at, hx, hy, col) => {
+    const n = o.path[at];
+    if (!n) return;
+    let dx = n.x - hx, dy = n.y - hy;
+    const d = Math.hypot(dx, dy) || 1, cx = hx + dx / d * .32, cy = hy + dy / d * .32;
+    dx /= d; dy /= d;
+    ctx.strokeStyle = col; ctx.lineWidth = .09;
+    ctx.beginPath(); ctx.moveTo(cx - dy * .32, cy + dx * .32); ctx.lineTo(cx + dy * .32, cy - dx * .32); ctx.stroke();
+    const s = dx > 0 || (dx === 0 && dy < 0) ? 1 : -1, kx = cx + dy * s * .58, ky = cy - dx * s * .58;
+    ctx.fillStyle = C.board; ctx.lineWidth = .05;
+    ctx.beginPath(); ctx.arc(kx, ky, .19, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = .04;
+    ctx.beginPath(); ctx.moveTo(kx, ky - .12); ctx.lineTo(kx, ky); ctx.lineTo(kx + .09, ky + .04); ctx.stroke();
+  };
+
   state.ops.forEach((o, i) => {
     if (!o.alive || state.status === "replay") return;
     const col = C.op[i];
@@ -561,7 +577,7 @@ export function draw() {
       const ax = h.hx + .5, ay = h.hy + .5, bx = h.tx + .5, by = h.ty + .5;
       ctx.strokeStyle = col; ctx.lineWidth = .04; ctx.setLineDash([.06, .12]);
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = col; ctx.fillRect(ax + .12, ay - .52, .1, .3); ctx.fillRect(ax + .28, ay - .52, .1, .3);
+      holdMark(o, h.at, ax, ay, col);
       ctx.fillStyle = C.op[h.op]; ctx.beginPath();
       ctx.moveTo(bx, by - .24); ctx.lineTo(bx + .24, by); ctx.lineTo(bx, by + .24); ctx.lineTo(bx - .24, by);
       ctx.closePath(); ctx.fill();
@@ -570,6 +586,7 @@ export function draw() {
       const t = state.pendingHold.at === 0 ? o : o.path[state.pendingHold.at - 1];
       ctx.strokeStyle = col; ctx.lineWidth = .07; ctx.setLineDash([.1, .1]);
       ctx.beginPath(); ctx.arc(t.x, t.y, .42, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      holdMark(o, state.pendingHold.at, t.x, t.y, col);
     }
     ctx.globalAlpha = 1;
   });
