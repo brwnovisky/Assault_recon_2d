@@ -140,11 +140,19 @@ export function tapTile(tx, ty) {
   } else {
     if (hit === state.sel) return;
     // A rota nunca passa nem termina na posição final de outro operador
-    const s = endOf(o), ends = new Map();
-    for (const u of state.ops) if (u !== o && u.alive) ends.set(tileKey(endOf(u)), u);
+    // e só passa (sem terminar) pelas casas da rota de outro operador
+    const s = endOf(o), ends = new Map(), paths = new Map();
+    for (const u of state.ops) if (u !== o && u.alive) {
+      ends.set(tileKey(endOf(u)), u);
+      for (const p of u.path) paths.set(tileKey(p), u);
+    }
+    const k = ty * state.W + tx;
+    if (!ends.has(k) && paths.has(k)) {
+      say(`Ali passa a rota de ${NAMES[paths.get(k).id]}: escolha outra casa final.`);
+      return;
+    }
     const full = bfs(s.x | 0, s.y | 0, tx, ty, ends);
     if (!full) {
-      const k = ty * state.W + tx;
       say(state.solid[k] ? "Esse ponto está bloqueado." : ends.has(k) ? `Ali é a posição final de ${NAMES[ends.get(k).id]}.` : "Sem caminho até ali.");
       return;
     }
@@ -154,7 +162,12 @@ export function tapTile(tx, ty) {
       if (d > left + 1e-6) break;
       left -= d; px = q.x; py = q.y; n++;
     }
-    if (!n) { say(`${NAMES[o.id]} já usou todo o movimento do turno.`); return; }
+    const fit = n;
+    while (n && paths.has(tileKey(full[n - 1]))) n--;
+    if (!n) {
+      say(fit ? `${NAMES[o.id]} não tem onde parar fora da rota de outro operador.` : `${NAMES[o.id]} já usou todo o movimento do turno.`);
+      return;
+    }
     if (n < full.length) say(`Rota cortada no limite de movimento de ${NAMES[o.id]}.`);
     if (o.path.length === o.lock) o.planAt = ++state.planSeq;
     o.path.push(...full.slice(0, n));
