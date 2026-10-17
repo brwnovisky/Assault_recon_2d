@@ -36,9 +36,10 @@ export function rayDist(x, y, a, max) {
   }
 }
 
-export function bfs(sx, sy, tx, ty) {
+// `avoid`: casas (índices) que a rota não pode usar
+export function bfs(sx, sy, tx, ty, avoid) {
   const s = sy * state.W + sx, t = ty * state.W + tx;
-  if (state.solid[t] || s === t) return null;
+  if (state.solid[t] || s === t || (avoid && avoid.has(t))) return null;
   state.prev.fill(-2);
   state.prev[s] = -1;
   let h = 0, tl = 0;
@@ -51,7 +52,7 @@ export function bfs(sx, sy, tx, ty) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= state.W || ny >= state.H) continue;
       const nk = ny * state.W + nx;
-      if (state.solid[nk] || state.prev[nk] !== -2) continue;
+      if (state.solid[nk] || state.prev[nk] !== -2 || (avoid && avoid.has(nk))) continue;
       if (dx && dy && (
         state.solid[y * state.W + nx] ||
         state.solid[ny * state.W + x] ||

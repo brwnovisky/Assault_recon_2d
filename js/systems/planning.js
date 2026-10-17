@@ -139,10 +139,13 @@ export function tapTile(tx, ty) {
     o.acts.push({ aim, replaced });
   } else {
     if (hit === state.sel) return;
-    const s = endOf(o);
-    const full = bfs(s.x | 0, s.y | 0, tx, ty);
+    // A rota nunca passa nem termina na posição final de outro operador
+    const s = endOf(o), ends = new Map();
+    for (const u of state.ops) if (u !== o && u.alive) ends.set(tileKey(endOf(u)), u);
+    const full = bfs(s.x | 0, s.y | 0, tx, ty, ends);
     if (!full) {
-      say(state.solid[ty * state.W + tx] ? "Esse ponto está bloqueado." : "Sem caminho até ali.");
+      const k = ty * state.W + tx;
+      say(state.solid[k] ? "Esse ponto está bloqueado." : ends.has(k) ? `Ali é a posição final de ${NAMES[ends.get(k).id]}.` : "Sem caminho até ali.");
       return;
     }
     let left = MOVE_BUDGET - pathLen(o), px = s.x, py = s.y, n = 0;
