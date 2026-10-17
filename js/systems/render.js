@@ -157,12 +157,17 @@ function drawX(px, py, col, a) {
   ctx.globalAlpha = a;
   ctx.strokeStyle = col;
   ctx.lineWidth = .08;
+  const r = .22 * UNIT_SCALE;
   ctx.beginPath();
-  ctx.moveTo(px - .22, py - .22); ctx.lineTo(px + .22, py + .22);
-  ctx.moveTo(px + .22, py - .22); ctx.lineTo(px - .22, py + .22);
+  ctx.moveTo(px - r, py - r); ctx.lineTo(px + r, py + r);
+  ctx.moveTo(px + r, py - r); ctx.lineTo(px - r, py + r);
   ctx.stroke();
   ctx.globalAlpha = 1;
 }
+
+// Escala das figuras: com a casa ~1 m (largura de uma porta), ombros ~0,63 e cabeça ~0,25 da casa.
+// Desenho, arma e cano usam o referencial da unidade, multiplicado por UNIT_SCALE no mapa
+const UNIT_SCALE = 1.5;
 
 // Arma no referencial da unidade: cano no eixo y = GUN_Y, girando em torno da culatra (GUN_PIVOT)
 const GUN_Y = 0.095, GUN_PIVOT = 0.05, RECOIL = 0.05, MUZZLE_OP = 0.42, MUZZLE_EN = 0.402;
@@ -174,7 +179,7 @@ const shotOf = (en, i) => state.tracers.find(t => t.en === en && t.i === i);
 function gunPose(u, shot) {
   if (!shot) return { ang: 0, back: 0 };
   const dx = shot.tx - u.x, dy = shot.ty - u.y, c = Math.cos(u.a), s = Math.sin(u.a);
-  const lx = dx * c + dy * s, ly = dy * c - dx * s;
+  const lx = (dx * c + dy * s) / UNIT_SCALE, ly = (dy * c - dx * s) / UNIT_SCALE;
   return { ang: Math.atan2(ly - GUN_Y, lx - GUN_PIVOT), back: RECOIL * shot.t / TRACER_LIFE };
 }
 
@@ -191,7 +196,7 @@ function applyGun(g, pose) {
 
 // Ponta do cano em coordenadas do mapa
 function muzzle(u, pose, len) {
-  const [mx, my] = gunPoint(pose, len, GUN_Y), c = Math.cos(u.a), s = Math.sin(u.a);
+  const [gx, gy] = gunPoint(pose, len, GUN_Y), mx = gx * UNIT_SCALE, my = gy * UNIT_SCALE, c = Math.cos(u.a), s = Math.sin(u.a);
   return [u.x + mx * c - my * s, u.y + mx * s + my * c];
 }
 
@@ -211,6 +216,7 @@ function drawEnemy(e, pose) {
   ctx.save();
   ctx.translate(e.x, e.y);
   ctx.rotate(e.a);
+  ctx.scale(UNIT_SCALE, UNIT_SCALE);
 
   if (e.vis) {
     // 0. Sombra suave
@@ -329,6 +335,7 @@ function drawOperator(g, o, col, pose, shadow) {
   g.save();
   g.translate(o.x, o.y);
   g.rotate(o.a);
+  g.scale(UNIT_SCALE, UNIT_SCALE);
 
   const isMoving = (state.status === "exec" || state.status === "replay") && o.moving;
   const legCadence = isMoving ? state.simTime * 14 : 0;
@@ -468,7 +475,7 @@ function drawOperator(g, o, col, pose, shadow) {
 }
 
 // Contorno do operador selecionado: a figura (sem sombra) dilatada em 8 direções, tingida e recortada pela própria figura
-const OUTLINE_BOX = 0.65, OUTLINE_W = 0.05;
+const OUTLINE_BOX = 0.65 * UNIT_SCALE, OUTLINE_W = 0.05;
 function drawOutline(o, col, pose) {
   const s = dpr * TS * state.Z, n = Math.ceil(2 * OUTLINE_BOX * s), r = OUTLINE_W * s;
   for (const c of [fx, ring]) { c.width = n; c.height = n; }
