@@ -66,7 +66,6 @@ function execute() {
     }
   }
   state.lastMove = 0;
-  state.pendingHold = null;
   state.replayFrames = [];
   recordReplay();
   state.uiDirty = true;
@@ -201,7 +200,7 @@ function start(resume) {
   buildWorld();
   say("Planeje as rotas e execute.");
   req();
-  state.Z = 1; state.OX = 0; state.OY = 0; state.pendingHold = null;
+  state.Z = 1; state.OX = 0; state.OY = 0;
   const ok = !!resume && restore();
   if (!ok) delete state.store.plans[state.mapId];
   buildSquad();

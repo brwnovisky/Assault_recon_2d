@@ -10,13 +10,11 @@ export function select(i) {
   if (state.status !== "plan" || !state.ops[i] || !state.ops[i].alive) return;
   if (i !== state.sel) state.mode = null;
   state.sel = i;
-  state.pendingHold = null;
   state.uiDirty = true;
 }
 
 export function setMode(m) {
   state.mode = state.mode === m ? null : m;
-  state.pendingHold = null;
   state.uiDirty = true;
 }
 
@@ -30,7 +28,6 @@ export function undo() {
     if (a.replaced) o.aims.push(a.replaced);
   }
   if (o.path.length === o.lock) o.planAt = Infinity;
-  state.pendingHold = null;
   resolveEnds();
   state.uiDirty = true;
 }
@@ -42,29 +39,14 @@ export function clearPlan() {
   o.aims = [];
   o.holds = [];
   o.planAt = Infinity;
-  state.pendingHold = null;
   resolveEnds();
   state.uiDirty = true;
 }
 
+// Espera: o fim da rota atual (ou a casa inicial, sem rota) fica preso a uma casa da rota de outro
+// operador; os movimentos traçados depois só começam quando ele chegar lá
 function waitTap(o, tx, ty) {
-  if (!state.pendingHold) {
-    let at = -1;
-    if (tileIs(o, tx, ty)) at = 0;
-    else {
-      const k = o.path.findIndex(p => tileIs(p, tx, ty));
-      if (k >= 0) at = k + 1;
-    }
-    if (at < 0) say(`Toque num ponto da rota de ${NAMES[o.id]} para marcar onde ele espera.`);
-    else if (at >= o.path.length) say(`${NAMES[o.id]} precisa ter rota depois do ponto de espera.`);
-    else {
-      state.pendingHold = { op: o.id, at };
-      say(`Agora toque no ponto da rota de outro operador que libera ${NAMES[o.id]}.`);
-    }
-    return;
-  }
-  const at = state.pendingHold.at;
-  state.pendingHold = null;
+  const at = o.path.length;
   for (const y of state.ops) {
     if (y === o || !y.alive) continue;
     const j = y.path.findIndex(p => tileIs(p, tx, ty));
@@ -82,7 +64,7 @@ function waitTap(o, tx, ty) {
     say(`${NAMES[o.id]} espera ${NAMES[y.id]} chegar ao ponto marcado.`);
     return;
   }
-  say("Esse ponto não está na rota de outro operador. Espera cancelada.");
+  say(`Toque numa casa da rota de outro operador para ${NAMES[o.id]} esperar por ele.`);
 }
 
 const tileKey = p => (p.y | 0) * state.W + (p.x | 0);

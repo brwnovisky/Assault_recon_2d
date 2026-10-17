@@ -29,7 +29,6 @@ export const state = {
   Z: 1,
   OX: 0,
   OY: 0,
-  pendingHold: null,
   planSeq: 0,
   freezeT: 0,
   replaySpeed: 1,

@@ -63,7 +63,7 @@ export function pruneHolds() {
   for (const o of state.ops) {
     for (const h of o.holds.slice()) {
       const y = state.ops[h.op];
-      const ok = h.at < o.path.length && y.alive && tileIs(y.path[h.ti - 1], h.tx, h.ty) && tileIs(h.at === 0 ? o : o.path[h.at - 1], h.hx, h.hy);
+      const ok = h.at <= o.path.length && y.alive && tileIs(y.path[h.ti - 1], h.tx, h.ty) && tileIs(h.at === 0 ? o : o.path[h.at - 1], h.hx, h.hy);
       if (!ok) removeHold(o, h);
     }
   }

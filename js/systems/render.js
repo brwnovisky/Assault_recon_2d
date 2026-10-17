@@ -525,10 +525,10 @@ export function draw() {
 
   if (preview) aimPreview(state.ops[state.sel], C.op[state.sel]);
 
-  // Espera: traço atravessando a rota onde o operador retoma o movimento e um relógio ao lado
-  const holdMark = (o, at, hx, hy, col) => {
-    const n = o.path[at];
-    if (!n) return;
+  // Espera: traço atravessando a rota onde o operador retoma o movimento e um relógio ao lado.
+  // Sem rota depois da espera, o traço fica de frente para a casa que libera
+  const holdMark = (o, h, col) => {
+    const hx = h.hx + .5, hy = h.hy + .5, n = o.path[h.at] || { x: h.tx + .5, y: h.ty + .5 };
     let dx = n.x - hx, dy = n.y - hy;
     const d = Math.hypot(dx, dy) || 1, cx = hx + dx / d * .32, cy = hy + dy / d * .32;
     dx /= d; dy /= d;
@@ -577,16 +577,10 @@ export function draw() {
       const ax = h.hx + .5, ay = h.hy + .5, bx = h.tx + .5, by = h.ty + .5;
       ctx.strokeStyle = col; ctx.lineWidth = .04; ctx.setLineDash([.06, .12]);
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
-      holdMark(o, h.at, ax, ay, col);
+      holdMark(o, h, col);
       ctx.fillStyle = C.op[h.op]; ctx.beginPath();
       ctx.moveTo(bx, by - .24); ctx.lineTo(bx + .24, by); ctx.lineTo(bx, by + .24); ctx.lineTo(bx - .24, by);
       ctx.closePath(); ctx.fill();
-    }
-    if (state.pendingHold && state.pendingHold.op === i) {
-      const t = state.pendingHold.at === 0 ? o : o.path[state.pendingHold.at - 1];
-      ctx.strokeStyle = col; ctx.lineWidth = .07; ctx.setLineDash([.1, .1]);
-      ctx.beginPath(); ctx.arc(t.x, t.y, .42, 0, 7); ctx.stroke(); ctx.setLineDash([]);
-      holdMark(o, state.pendingHold.at, t.x, t.y, col);
     }
     ctx.globalAlpha = 1;
   });
