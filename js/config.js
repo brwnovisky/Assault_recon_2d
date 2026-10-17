@@ -35,6 +35,7 @@ export const FREEZE_REAL = 1.2;
 export const TRACER_LIFE = 0.14;
 export const WATCH_SWITCH = 5;
 export const THREAT_MEMORY = 4;
+export const DOOR_SPEED = 5;
 export const REPLAY_SPEEDS = [1, 0.5, 0.25];
 
 export const NAMES = ["Alfa", "Bravo", "Charlie", "Delta"];

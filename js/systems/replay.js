@@ -13,7 +13,7 @@ function snapshot(opKeys, enemyKeys) {
   return {
     simTime: state.simTime,
     lines: state.lines.slice(),
-    doors: state.doors.map(d => d.open),
+    doors: state.doors.map(d => [d.open, d.swing, d.settled]),
     ops: state.ops.map(o => pick(o, opKeys)),
     enemies: state.enemies.map(e => pick(e, enemyKeys)),
     tracers: state.tracers.map(t => ({ ...t }))
@@ -23,7 +23,7 @@ function snapshot(opKeys, enemyKeys) {
 function applySnapshot(s) {
   state.simTime = s.simTime;
   state.lines = s.lines.slice();
-  s.doors.forEach((open, i) => setDoor(i, open));
+  s.doors.forEach(([open, swing, settled], i) => { setDoor(i, open); Object.assign(state.doors[i], { swing, settled }); });
   s.ops.forEach((o, i) => Object.assign(state.ops[i], o));
   s.enemies.forEach((e, i) => Object.assign(state.enemies[i], e));
   state.tracers = s.tracers.map(t => ({ ...t }));

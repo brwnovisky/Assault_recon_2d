@@ -1,5 +1,6 @@
 import { STORE_KEY, MAX_MAPS } from "./config.js";
 import { state, say, setDoor } from "./state.js";
+import { settleDoor } from "./systems/doors.js";
 
 export const emptyStore = () => ({ version: 1, lastMapId: null, settings: { gen: null }, maps: {}, plans: {}, matches: {} });
 
@@ -68,8 +69,9 @@ export function savePlan() {
     operators: state.ops.map(o => ({
       path: o.path.map(tileOf),
       aims: o.aims.map(a => ({ at: a.at, tile: tileOf(a) })),
-      steps: o.acts.map(a => typeof a === "number" ? { type: "move", tiles: a } : a.hold ? { type: "hold", index: o.holds.indexOf(a.hold) } : { type: "aim", index: o.aims.indexOf(a.aim), replaced: a.replaced ? { at: a.replaced.at, tile: tileOf(a.replaced) } : null }),
+      steps: o.acts.map(a => typeof a === "number" ? { type: "move", tiles: a } : a.hold ? { type: "hold", index: o.holds.indexOf(a.hold) } : a.open ? { type: "open", index: o.opens.indexOf(a.open) } : { type: "aim", index: o.aims.indexOf(a.aim), replaced: a.replaced ? { at: a.replaced.at, tile: tileOf(a.replaced) } : null }),
       holds: o.holds.map(h => ({ at: h.at, operator: h.op, triggerIndex: h.ti, hold: [h.hx, h.hy], trigger: [h.tx, h.ty] })),
+      opens: o.opens.map(q => ({ at: q.at, door: q.door, tile: [q.tx, q.ty] })),
       order: Number.isFinite(o.planAt) ? o.planAt : null
     }))
   };
@@ -93,6 +95,7 @@ export function saveMatch() {
       attackers: e.attackers, threatLeft: r3(e.threatLeft)
     })),
     doorsOpen: state.doors.map(d => d.open),
+    doorSwing: state.doors.map(d => r3(d.swing)),
     log: state.lines.slice()
   };
   if (over) delete state.store.plans[state.mapId];
@@ -120,7 +123,12 @@ export function restore() {
     e.hp = s.hp; e.alive = s.hp > 0; e.alert = s.alert; e.watchDoor = s.watchDoor; e.watchLeft = s.watchLeft; e.seen = s.seen;
     e.attackers = s.attackers || 0; e.threatLeft = s.threatLeft || 0;
   });
-  m.doorsOpen.forEach((v, i) => setDoor(i, v));
+  m.doorsOpen.forEach((v, i) => {
+    const d = state.doors[i];
+    setDoor(i, v);
+    if (!v) return;
+    if (m.doorSwing) { d.swing = m.doorSwing[i]; d.settled = true; } else settleDoor(d);
+  });
   state.lines = m.log.slice(-2);
   if (m.status !== "active") return true;
 
@@ -132,12 +140,13 @@ export function restore() {
       o.path = s.path.map(center);
       o.aims = s.aims.map(a => ({ at: a.at, ...center(a.tile) }));
       o.holds = (s.holds || []).map(h => ({ at: h.at, op: h.operator, ti: h.triggerIndex, hx: h.hold[0], hy: h.hold[1], tx: h.trigger[0], ty: h.trigger[1] }));
+      o.opens = (s.opens || []).map(q => ({ at: q.at, door: q.door, tx: q.tile[0], ty: q.tile[1] }));
       o.planAt = s.order == null ? Infinity : s.order;
       state.planSeq = Math.max(state.planSeq, s.order || 0);
-      o.acts = s.steps.map(st => st.type === "move" ? st.tiles : st.type === "hold" ? { hold: o.holds[st.index] } : { aim: o.aims[st.index], replaced: st.replaced ? { at: st.replaced.at, ...center(st.replaced.tile) } : null }).filter(a => typeof a === "number" || !("hold" in a) || a.hold);
+      o.acts = s.steps.map(st => st.type === "move" ? st.tiles : st.type === "hold" ? { hold: o.holds[st.index] } : st.type === "open" ? { open: o.opens[st.index] } : { aim: o.aims[st.index], replaced: st.replaced ? { at: st.replaced.at, ...center(st.replaced.tile) } : null }).filter(a => typeof a === "number" || (!("hold" in a) || a.hold) && (!("open" in a) || a.open));
     });
     state.sel = p.selected;
-    state.mode = p.mode === "aim" || p.mode === "move" ? p.mode : null;
+    state.mode = p.mode === "aim" || p.mode === "move" || p.mode === "open" ? p.mode : null;
   }
   if (!state.ops[state.sel] || !state.ops[state.sel].alive) {
     state.sel = state.ops.findIndex(o => o.alive);

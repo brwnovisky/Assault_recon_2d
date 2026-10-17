@@ -3,6 +3,7 @@ import { state } from "./state.js";
 import { createOperator } from "./entities/operator.js";
 import { createEnemy, updateVis } from "./entities/enemy.js";
 import { faceDoor } from "./entities/unit.js";
+import { initDoor, areaShapes } from "./systems/doors.js";
 
 export function buildWorld() {
   state.H = state.MAP.length;
@@ -58,7 +59,9 @@ export function buildWorld() {
     rc++;
   }
 
+  const shapes = areaShapes();
   for (const d of state.doors) {
+    initDoor(d, shapes);
     d.rooms = [];
     for (let i = 0; i < 4; i++) {
       const r = state.roomId[(d.y + DIRS[i][1]) * state.W + d.x + DIRS[i][0]];

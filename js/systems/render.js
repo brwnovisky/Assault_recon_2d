@@ -1,6 +1,7 @@
 import { C, OP_HALF, OP_RANGE, EN_HALF, EN_RANGE, TRACER_LIFE } from "../config.js";
 import { state } from "../state.js";
-import { adiff, los } from "../pathfinding.js";
+import { adiff, los, opaqueAt, linksWall, WALL_HALF } from "../pathfinding.js";
+import { leafDir } from "./doors.js";
 import { endOf, activeAim } from "../entities/operator.js";
 
 let cv, ctx, bg, bgx, fx, fxg, ring, ringg, TS = 32, dpr = 1;
@@ -53,18 +54,30 @@ export function layout(req) {
 function drawExit(g, x, y) {
   const vert = x === 0 || x === state.W - 1, out = vert ? (x === 0 ? -1 : 1) : (y === 0 ? -1 : 1);
   g.fillStyle = C.wall;
+  const a = .5 - WALL_HALF, w = 2 * WALL_HALF;
   if (vert) {
-    g.fillRect(x - .01, y - .01, 1.02, .18);
-    g.fillRect(x - .01, y + .83, 1.02, .18);
+    g.fillRect(x + a, y - .01, w, .18);
+    g.fillRect(x + a, y + .83, w, .18);
   } else {
-    g.fillRect(x - .01, y - .01, .18, 1.02);
-    g.fillRect(x + .83, y - .01, .18, 1.02);
+    g.fillRect(x - .01, y + a, .18, w);
+    g.fillRect(x + .83, y + a, .18, w);
   }
   g.fillStyle = C.door;
   g.globalAlpha = .6;
   if (vert) g.fillRect(out < 0 ? x : x + .84, y + .18, .16, .65);
   else g.fillRect(x + .18, out < 0 ? y : y + .84, .65, .16);
   g.globalAlpha = 1;
+}
+
+// Parede fina: quadrado central de 1/3 da casa e braços até as paredes e portas vizinhas
+function drawWall(g, x, y) {
+  const a = .5 - WALL_HALF, b = .5 + WALL_HALF, w = 2 * WALL_HALF, e = .01;
+  g.fillStyle = C.wall;
+  g.fillRect(x + a, y + a, w, w);
+  if (linksWall(x - 1, y)) g.fillRect(x - e, y + a, a + e, w);
+  if (linksWall(x + 1, y)) g.fillRect(x + b, y + a, a + e, w);
+  if (linksWall(x, y - 1)) g.fillRect(x + a, y - e, w, a + e);
+  if (linksWall(x, y + 1)) g.fillRect(x + a, y + b, w, a + e);
 }
 
 export function drawStatic() {
@@ -85,7 +98,7 @@ function paintStatic(g) {
     const s = state.solid[y * state.W + x];
     if (s === 1) {
       if (state.MAP[y][x] === "O") drawExit(g, x, y);
-      else { g.fillStyle = C.wall; g.fillRect(x - .01, y - .01, 1.02, 1.02); }
+      else drawWall(g, x, y);
     } else if (s === 2) {
       g.fillStyle = C.crate;
       g.fillRect(x + .14, y + .14, .72, .72);
@@ -107,8 +120,8 @@ function cone(u, half, range, color, alpha) {
     const a = u.a - half + 2 * half * i / R, cx = Math.cos(a), sy = Math.sin(a);
     let d = 0.3;
     while (d < range) {
-      if (state.opaque[((u.y + sy * d) | 0) * state.W + ((u.x + cx * d) | 0)]) break;
-      d += 0.15;
+      if (opaqueAt(u.x + cx * d, u.y + sy * d)) break;
+      d += 0.08;
     }
     ctx.lineTo(u.x + cx * d, u.y + sy * d);
   }
@@ -497,15 +510,13 @@ export function draw() {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
+  // Porta: folha presa na dobradiça, girada pela abertura atual
   for (const d of state.doors) {
-    ctx.fillStyle = C.door;
-    if (!d.open) {
-      d.vert ? ctx.fillRect(d.x + .36, d.y, .28, 1) : ctx.fillRect(d.x, d.y + .36, 1, .28);
-    } else {
-      ctx.globalAlpha = .55;
-      d.vert ? ctx.fillRect(d.x + .36, d.y, .28, .14) : ctx.fillRect(d.x, d.y + .36, .14, .28);
-      ctx.globalAlpha = 1;
-    }
+    const [lx, ly] = leafDir(d, d.swing);
+    ctx.strokeStyle = C.door; ctx.lineWidth = .14; ctx.lineCap = "butt";
+    ctx.beginPath(); ctx.moveTo(d.hx, d.hy); ctx.lineTo(d.hx + lx * .97, d.hy + ly * .97); ctx.stroke();
+    ctx.lineCap = "round";
+    ctx.fillStyle = C.wall; ctx.beginPath(); ctx.arc(d.hx, d.hy, .09, 0, 7); ctx.fill();
   }
 
   if (state.status === "plan" && state.turn === 1) {
@@ -577,10 +588,26 @@ export function draw() {
   });
 
   // Esperas por cima de todas as rotas, para o relógio não ficar coberto
+  // Abrir porta: chave na casa da rota onde o operador abre, puxada para o lado da porta
+  const keyMark = (q, col) => {
+    const d = state.doors[q.door], ax = q.tx + .5, ay = q.ty + .5;
+    const dx = d.x + .5 - ax, dy = d.y + .5 - ay, n = Math.hypot(dx, dy) || 1;
+    const kx = ax + dx / n * .3, ky = ay + dy / n * .3;
+    ctx.fillStyle = C.board; ctx.strokeStyle = col; ctx.lineWidth = .05;
+    ctx.beginPath(); ctx.arc(kx, ky, .22, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = .045;
+    ctx.beginPath(); ctx.arc(kx - .08, ky, .065, 0, 7);
+    ctx.moveTo(kx - .015, ky); ctx.lineTo(kx + .14, ky);
+    ctx.moveTo(kx + .08, ky); ctx.lineTo(kx + .08, ky + .07);
+    ctx.moveTo(kx + .14, ky); ctx.lineTo(kx + .14, ky + .07);
+    ctx.stroke();
+  };
+
   state.ops.forEach((o, i) => {
     if (!o.alive || state.status === "replay") return;
     const col = C.op[i];
     ctx.globalAlpha = fade(i);
+    for (const q of o.opens) if (state.status === "plan" || !q.done) keyMark(q, col);
     for (const h of o.holds) {
       if (state.status !== "plan" && h.done) continue;
       ctx.strokeStyle = col; ctx.lineWidth = .04; ctx.setLineDash([.06, .12]);

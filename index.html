@@ -75,6 +75,7 @@
           <button data-mode="move" aria-pressed="false">Mover</button>
           <button data-mode="aim" aria-pressed="false">Mirar</button>
           <button data-mode="wait" aria-pressed="false">Esperar</button>
+          <button data-mode="open" aria-pressed="false">Abrir</button>
         </div>
         <button id="undo">Desfazer</button>
         <button id="clear">Limpar</button>
@@ -153,6 +154,10 @@
             operador. O fim da rota atual do selecionado (ou a casa onde ele está, se ainda não tem rota) fica preso a
             essa casa: os movimentos traçados depois só começam quando o outro chegar lá. Combater inimigos continua
             valendo durante a espera. Se quem dá o sinal cair, a espera é liberada.</p>
+          <p>Abrir: com um operador selecionado, toque em Abrir e numa porta ao lado do fim da rota dele (ou da casa
+            onde ele está). Uma chave marca o ponto. Lá ele abre a porta e só segue quando ela termina de girar. A porta
+            gira para um lado sorteado até encostar na parede ou num obstáculo (caixa, inimigo). Atravessar uma porta
+            fechada também a abre e espera o giro.</p>
           <p>Operadores nunca ocupam a mesma casa. Em qualquer disputa de casa vence a rota criada primeiro: se duas
             rotas terminam na mesma casa, a criada depois é cortada antes dela, e quem está parado sem rota mantém a
             sua casa. Quem encontrar a próxima casa ocupada fica parado (anel tracejado) até ela liberar. Cada turno
@@ -162,7 +167,7 @@
           <p>Replay: a mesma barra de tempo permite avançar ou voltar; o botão de velocidade alterna entre 1×, 0.5× e
             0.25×.</p>
           <p>Zoom: pinça no celular ou roda do mouse. Com zoom, arraste o mapa para movê-lo.</p>
-          <p>Atalhos: 1 a 4 seleciona, M move, A mira, E espera (de novo desliga o modo), Z desfaz, R replay, Enter executa.</p>
+          <p>Atalhos: 1 a 4 seleciona, M move, A mira, E espera, O abre porta (de novo desliga o modo), Z desfaz, R replay, Enter executa.</p>
         </div>
       </div>
     </div>

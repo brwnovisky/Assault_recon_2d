@@ -1,7 +1,7 @@
 import { MOVE_BUDGET, NAMES } from "../config.js";
 import { state, say } from "../state.js";
 import { bfs, pathLen } from "../pathfinding.js";
-import { redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs, endOf, byPriority } from "../entities/operator.js";
+import { redeploy, slotIndex, removeHold, pruneHolds, dependsOn, tileIs, endOf, byPriority, routePoint } from "../entities/operator.js";
 
 // Há ordem do jogador (rota, mira ou espera) para algum operador vivo
 export const hasOrders = () => state.ops.some(o => o.alive && o.acts.length > 0);
@@ -23,6 +23,7 @@ export function undo() {
   if (a === undefined) return;
   if (typeof a === "number") o.path.length -= a;
   else if (a.hold) o.holds = o.holds.filter(x => x !== a.hold);
+  else if (a.open) o.opens = o.opens.filter(x => x !== a.open);
   else {
     o.aims = o.aims.filter(x => x !== a.aim);
     if (a.replaced) o.aims.push(a.replaced);
@@ -38,6 +39,7 @@ export function clearPlan() {
   o.acts = [];
   o.aims = [];
   o.holds = [];
+  o.opens = [];
   o.planAt = Infinity;
   resolveEnds();
   state.uiDirty = true;
@@ -65,6 +67,23 @@ function waitTap(o, tx, ty) {
     return;
   }
   say(`Toque numa casa da rota de outro operador para ${NAMES[o.id]} esperar por ele.`);
+}
+
+// Abrir porta: vale no fim da rota atual (ou na casa de partida), que precisa estar ao lado da porta.
+// Os movimentos traçados depois só começam quando a porta termina de girar
+function openTap(o, tx, ty) {
+  const di = state.doorIdx[ty * state.W + tx];
+  if (di < 0) { say("Toque numa porta para abri-la."); return; }
+  const at = o.path.length, p = routePoint(o, at), px = p.x | 0, py = p.y | 0;
+  if ((px === tx && py === ty) || Math.abs(px - tx) > 1 || Math.abs(py - ty) > 1) {
+    say(`O fim da rota de ${NAMES[o.id]} precisa estar ao lado da porta.`);
+    return;
+  }
+  if (o.opens.some(q => q.at === at && q.door === di)) return;
+  const q = { at, door: di, tx: px, ty: py };
+  o.opens.push(q);
+  o.acts.push({ open: q });
+  say(`${NAMES[o.id]} abre a porta e espera ela girar.`);
 }
 
 const tileKey = p => (p.y | 0) * state.W + (p.x | 0);
@@ -113,6 +132,7 @@ export function tapTile(tx, ty) {
   const o = state.ops[state.sel];
   if (!o.alive) return;
   if (state.mode === "wait") { waitTap(o, tx, ty); return; }
+  if (state.mode === "open") { openTap(o, tx, ty); return; }
   if (state.mode === "aim") {
     // A mira vale a partir do fim da rota atual e substitui outra marcada no mesmo ponto
     const at = o.path.length, aim = { at, x: tx + .5, y: ty + .5 }, replaced = o.aims.find(a => a.at === at) || null;

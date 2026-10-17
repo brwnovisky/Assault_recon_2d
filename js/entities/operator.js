@@ -59,12 +59,21 @@ export function removeHold(o, h) {
   o.acts = o.acts.filter(a => a.hold !== h);
 }
 
+// Ponto da rota no índice `at` (0 = casa de partida)
+export const routePoint = (o, at) => at === 0 ? o : o.path[at - 1];
+
 export function pruneHolds() {
   for (const o of state.ops) {
     for (const h of o.holds.slice()) {
       const y = state.ops[h.op];
-      const ok = h.at <= o.path.length && y.alive && tileIs(y.path[h.ti - 1], h.tx, h.ty) && tileIs(h.at === 0 ? o : o.path[h.at - 1], h.hx, h.hy);
+      const ok = h.at <= o.path.length && y.alive && tileIs(y.path[h.ti - 1], h.tx, h.ty) && tileIs(routePoint(o, h.at), h.hx, h.hy);
       if (!ok) removeHold(o, h);
+    }
+    // Abrir porta só vale enquanto o ponto da rota ainda existe e é o mesmo
+    for (const q of o.opens.slice()) {
+      if (q.at <= o.path.length && tileIs(routePoint(o, q.at), q.tx, q.ty)) continue;
+      o.opens = o.opens.filter(x => x !== q);
+      o.acts = o.acts.filter(a => a.open !== q);
     }
   }
 }
@@ -83,6 +92,7 @@ export function redeploy(o, x, y) {
   o.acts = [];
   o.aims = [];
   o.holds = [];
+  o.opens = [];
   o.planAt = Infinity;
   faceDoor(o);
   pruneHolds();

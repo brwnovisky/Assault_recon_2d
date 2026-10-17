@@ -28,7 +28,7 @@ function toPlan() {
   state.tracers.length = 0;
   for (const o of state.ops) {
     o.path = []; o.acts = []; o.pi = 0; o.aims = []; o.target = null;
-    o.holds = []; o.waiting = false; o.lock = 0; o.planAt = Infinity;
+    o.holds = []; o.opens = []; o.waiting = false; o.lock = 0; o.planAt = Infinity;
     if (o.alive && o.lockTo >= 0) {
       o.path = [{ x: (o.lockTo % state.W) + .5, y: ((o.lockTo / state.W) | 0) + .5 }];
       o.lock = 1;
@@ -57,6 +57,7 @@ function execute() {
   for (const o of state.ops) {
     o.pi = 0; o.stopped = false; o.blocked = false; o.blockedBy = -1;
     for (const h of o.holds) h.done = false;
+    for (const q of o.opens) q.done = false;
     if (o.lock && o.lockFrom >= 0 && o.path.length) {
       o.cur = o.lockFrom;
       o.res = ((o.path[0].y | 0) * state.W) + (o.path[0].x | 0);
@@ -307,6 +308,7 @@ function setupEvents() {
     else if (k === "m") setMode("move");
     else if (k === "a") setMode("aim");
     else if (k === "e") setMode("wait");
+    else if (k === "o") setMode("open");
     else if (k === "z") undo();
     else if (k === "r") state.status === "replay" ? endReplay(req) : startReplay(req);
     else if (k === "enter") execute();

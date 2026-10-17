@@ -1,6 +1,7 @@
 import { DT, SPEED, MOVE_TIME, NAMES } from "../config.js";
 import { state, say, setDoor } from "../state.js";
 import { byPriority, activeAim, aimAngle } from "../entities/operator.js";
+import { doorBusy } from "./doors.js";
 
 function blocker(o, k) {
   const cx = o.cur % state.W, cy = (o.cur / state.W) | 0;
@@ -36,6 +37,17 @@ export function moveOperators() {
         o.waiting = true;
       }
     }
+    // Abrir porta neste ponto da rota: abre e espera a porta terminar de girar
+    const q = !o.waiting && o.opens.find(q => !q.done && q.at === o.pi);
+    if (q) {
+      const d = state.doors[q.door];
+      if (!d.open) {
+        setDoor(q.door, true);
+        say(`${NAMES[o.id]} abriu a porta.`);
+      }
+      if (doorBusy(d)) { o.waiting = true; o.want = Math.atan2(d.y + .5 - o.y, d.x + .5 - o.x); }
+      else q.done = true;
+    }
     if (!o.waiting && !o.stopped && o.pi < o.path.length) {
       let sp = SPEED * DT * (o.target ? 0.7 : 1);
       while (sp > 1e-9 && o.pi < o.path.length) {
@@ -53,16 +65,20 @@ export function moveOperators() {
           o.res = k; o.blockedBy = -1;
         }
         const dx = p.x - o.x, dy = p.y - o.y, d = Math.hypot(dx, dy), di = state.doorIdx[k];
-        if (di >= 0 && !state.doors[di].open && d < 1.05) {
-          setDoor(di, true);
-          say(`${NAMES[o.id]} abriu a porta.`);
+        if (di >= 0 && d < 1.05) {
+          if (!state.doors[di].open) {
+            setDoor(di, true);
+            say(`${NAMES[o.id]} abriu a porta.`);
+          }
+          // Só atravessa depois que a porta terminou de girar
+          if (doorBusy(state.doors[di])) { o.waiting = true; o.want = Math.atan2(dy, dx); break; }
         }
         o.moving = true;
         if (d > 1e-4) o.want = Math.atan2(dy, dx);
         if (d <= sp + 1e-9) {
           o.x = p.x; o.y = p.y; o.pi++; o.cur = k; o.res = -1;
           sp = Math.max(0, sp - d);
-          if (o.holds.some(h => !h.done && h.at === o.pi)) break;
+          if (o.holds.some(h => !h.done && h.at === o.pi) || o.opens.some(q => !q.done && q.at === o.pi)) break;
         } else {
           o.x += dx / d * sp; o.y += dy / d * sp; sp = 0;
         }
