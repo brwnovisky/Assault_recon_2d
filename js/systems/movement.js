@@ -1,6 +1,6 @@
 import { DT, SPEED, MOVE_TIME, NAMES } from "../config.js";
 import { state, say, setDoor } from "../state.js";
-import { byPriority, activeAim } from "../entities/operator.js";
+import { byPriority, activeAim, aimAngle } from "../entities/operator.js";
 
 function blocker(o, k) {
   const cx = o.cur % state.W, cy = (o.cur / state.W) | 0;
@@ -68,8 +68,9 @@ export function moveOperators() {
         }
       }
     }
-    // A mira vigente vale andando, bloqueado ou esperando; o combate (depois) tem prioridade
+    // A mira vigente vale andando, bloqueado ou esperando; o combate (depois) tem prioridade.
+    // Com parede na linha, o operador trava na quina até a linha abrir
     const aim = activeAim(o);
-    if (aim) o.want = Math.atan2(aim.y - o.y, aim.x - o.x);
+    if (aim) o.want = aimAngle(o, aim);
   }
 }

@@ -3,6 +3,7 @@ import { state, say } from "../state.js";
 import { saveMatch } from "../storage.js";
 import { createUnit, faceDoor } from "./unit.js";
 import { updateVis } from "./enemy.js";
+import { los, rayDist } from "../pathfinding.js";
 
 export const createOperator = (x, y, id) => createUnit(x, y, 3, id);
 
@@ -17,6 +18,26 @@ export function activeAim(o) {
   let aim = null;
   for (const a of o.aims) if (a.at <= o.pi) aim = a;
   return aim;
+}
+
+// Ângulo para a mira: com a linha bloqueada por parede, gira a partir dela até a primeira quina
+// (o raio passa a ir bem mais longe, ou alcança a distância da mira) e trava nessa quina
+const EDGE_STEP = Math.PI / 360, EDGE_MAX = Math.PI * 2 / 3;
+export function aimAngle(o, aim) {
+  const a = Math.atan2(aim.y - o.y, aim.x - o.x);
+  if (los(o.x, o.y, aim.x, aim.y) >= 0) return a;
+  const L = Math.hypot(aim.x - o.x, aim.y - o.y);
+  const edge = s => {
+    let prev = rayDist(o.x, o.y, a, L);
+    for (let d = EDGE_STEP; d <= EDGE_MAX; d += EDGE_STEP) {
+      const h = rayDist(o.x, o.y, a + s * d, L);
+      if (h >= L - 1e-6 || h > prev * 1.3 + 0.3) return d;
+      prev = h;
+    }
+    return Infinity;
+  };
+  const l = edge(-1), r = edge(1);
+  return l === Infinity && r === Infinity ? a : l <= r ? a - l : a + r;
 }
 
 export const tileIs = (p, x, y) => p && (p.x | 0) === x && (p.y | 0) === y;

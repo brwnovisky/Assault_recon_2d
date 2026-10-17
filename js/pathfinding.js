@@ -21,6 +21,21 @@ export function los(ax, ay, bx, by) {
   return cover;
 }
 
+// Distância até a primeira casa opaca no ângulo a (DDA na grade), limitada a max
+export function rayDist(x, y, a, max) {
+  const dx = Math.cos(a), dy = Math.sin(a), sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+  const ix = Math.abs(1 / dx), iy = Math.abs(1 / dy);
+  let cx = x | 0, cy = y | 0;
+  let tx = dx ? (dx > 0 ? cx + 1 - x : x - cx) * ix : Infinity;
+  let ty = dy ? (dy > 0 ? cy + 1 - y : y - cy) * iy : Infinity;
+  for (;;) {
+    let t;
+    if (tx < ty) { t = tx; tx += ix; cx += sx; } else { t = ty; ty += iy; cy += sy; }
+    if (t >= max) return max;
+    if (cx < 0 || cy < 0 || cx >= state.W || cy >= state.H || state.opaque[cy * state.W + cx]) return t;
+  }
+}
+
 export function bfs(sx, sy, tx, ty) {
   const s = sy * state.W + sx, t = ty * state.W + tx;
   if (state.solid[t] || s === t) return null;
