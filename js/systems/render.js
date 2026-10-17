@@ -525,7 +525,7 @@ export function draw() {
 
   if (preview) aimPreview(state.ops[state.sel], C.op[state.sel]);
 
-  // Espera: traço atravessando a rota onde o operador retoma o movimento e um relógio ao lado.
+  // Espera: traço atravessando a rota onde o operador retoma o movimento e relógio na casa que libera.
   // Sem rota depois da espera, o traço fica de frente para a casa que libera
   const holdMark = (o, h, col) => {
     const hx = h.hx + .5, hy = h.hy + .5, n = o.path[h.at] || { x: h.tx + .5, y: h.ty + .5 };
@@ -534,17 +534,19 @@ export function draw() {
     dx /= d; dy /= d;
     ctx.strokeStyle = col; ctx.lineWidth = .09;
     ctx.beginPath(); ctx.moveTo(cx - dy * .32, cy + dx * .32); ctx.lineTo(cx + dy * .32, cy - dx * .32); ctx.stroke();
-    const s = dx > 0 || (dx === 0 && dy < 0) ? 1 : -1, kx = cx + dy * s * .58, ky = cy - dx * s * .58;
-    ctx.fillStyle = C.board; ctx.lineWidth = .05;
-    ctx.beginPath(); ctx.arc(kx, ky, .19, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.lineWidth = .04;
-    ctx.beginPath(); ctx.moveTo(kx, ky - .12); ctx.lineTo(kx, ky); ctx.lineTo(kx + .09, ky + .04); ctx.stroke();
+    const kx = h.tx + .5, ky = h.ty + .5;
+    ctx.fillStyle = C.board; ctx.lineWidth = .06;
+    ctx.beginPath(); ctx.arc(kx, ky, .24, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = .05;
+    ctx.beginPath(); ctx.moveTo(kx, ky - .15); ctx.lineTo(kx, ky); ctx.lineTo(kx + .11, ky + .05); ctx.stroke();
   };
+
+  // No planejamento, rotas de quem não está selecionado ficam apagadas (exceto no modo espera)
+  const fade = i => state.status === "plan" && i !== state.sel && state.mode !== "wait" ? 0.22 : 1;
 
   state.ops.forEach((o, i) => {
     if (!o.alive || state.status === "replay") return;
-    const col = C.op[i];
-    const fa = state.status === "plan" && i !== state.sel && state.mode !== "wait" ? 0.22 : 1;
+    const col = C.op[i], fa = fade(i);
     ctx.globalAlpha = fa;
     if (o.pi < o.path.length) {
       ctx.strokeStyle = col; ctx.lineWidth = i === state.sel ? 0.09 : 0.06; ctx.setLineDash([0.18, 0.14]);
@@ -571,16 +573,19 @@ export function draw() {
       ctx.moveTo(m.x, m.y - .32); ctx.lineTo(m.x, m.y + .32);
       ctx.stroke(); ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = fa;
+    ctx.globalAlpha = 1;
+  });
+
+  // Esperas por cima de todas as rotas, para o relógio não ficar coberto
+  state.ops.forEach((o, i) => {
+    if (!o.alive || state.status === "replay") return;
+    const col = C.op[i];
+    ctx.globalAlpha = fade(i);
     for (const h of o.holds) {
       if (state.status !== "plan" && h.done) continue;
-      const ax = h.hx + .5, ay = h.hy + .5, bx = h.tx + .5, by = h.ty + .5;
       ctx.strokeStyle = col; ctx.lineWidth = .04; ctx.setLineDash([.06, .12]);
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(h.hx + .5, h.hy + .5); ctx.lineTo(h.tx + .5, h.ty + .5); ctx.stroke(); ctx.setLineDash([]);
       holdMark(o, h, col);
-      ctx.fillStyle = C.op[h.op]; ctx.beginPath();
-      ctx.moveTo(bx, by - .24); ctx.lineTo(bx + .24, by); ctx.lineTo(bx, by + .24); ctx.lineTo(bx - .24, by);
-      ctx.closePath(); ctx.fill();
     }
     ctx.globalAlpha = 1;
   });
